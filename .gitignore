@@ -7,3 +7,6 @@ coverage/
 !.env.example
 .DS_Store
 Thumbs.db
+/next-scaffold/
+/.vercel/
+next-env.d.ts
