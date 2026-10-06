@@ -30,3 +30,8 @@ Each feature follows:
 ticket → branch → implementation → verification → review → merge.
 
 Project documentation, code and interface content use English.
+
+## Design Documents
+
+- [Business scope](docs/01-business-scope.md)
+- [Data model](docs/02-data-model.md)
