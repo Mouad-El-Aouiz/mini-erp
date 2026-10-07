@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, and email/password authentication are implemented. Tenant memberships, business permissions, and business modules are not implemented yet.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Membership management and business modules are not implemented yet.
 
 ## Working Process
 
@@ -181,7 +181,7 @@ runs authentication browser tests against that build and the temporary database.
 
 Better Auth manages email/password authentication and database-backed sessions.
 Public registration is disabled. `/dashboard` checks the session on the server;
-it currently displays identity information only, not tenant business data.
+it lists only the signed-in user's active company memberships. Company workspaces at `/tenants/[tenantId]` verify active membership again on every server request.
 
 Configure these private values in `.env`:
 
@@ -209,12 +209,12 @@ already exists, it makes no changes and does not reset the password. It is a
 local development utility, not a production user-management procedure.
 
 Visit `http://localhost:3000/sign-in`. Signing out invalidates the session.
-Email verification, password recovery, tenant membership checks, and production
+Email verification, password recovery, membership management, and production
 configuration are deferred.
 
 ## Authentication Browser Tests
 
-Playwright runs six checks against a production build in Chromium:
+Playwright runs authentication and tenant-access checks against a production build in Chromium:
 
 - Anonymous dashboard access is denied.
 - Incorrect passwords and unknown emails display the same generic message.
@@ -276,3 +276,23 @@ npm audit --omit=dev --audit-level=high
 
 A known unpatched braces finding remains in the Next.js ESLint dependency chain.
 See [SEC-001](docs/tickets/SEC-001.md) for advisories, exposure, and validation.
+
+## Company Selection
+
+After sign-in, `/dashboard` lists companies with an active membership for the
+current user, showing the user's role in each company. Users without an active
+membership see an empty state and can still sign out. No membership or company
+is created automatically.
+
+Opening a company navigates to `/tenants/[tenantId]`. The URL identifies the
+workspace; no global active-company cookie or persistent selection is stored.
+Each workspace request checks the session and active membership on the server.
+Invalid identifiers, missing companies, and unauthorized access show the same
+unavailable page. Anonymous requests redirect to sign-in.
+
+Company links disable prefetching, and returning to the selector fetches the
+current memberships. Role labels are informational; future business operations
+must enforce their own tenant and role checks. No business modules are included
+in this workspace shell.
+
+See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.

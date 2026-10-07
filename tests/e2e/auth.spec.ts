@@ -248,3 +248,75 @@ test("tenant access requires an active membership", async ({ page }) => {
     );
   }
 });
+
+
+test("company selection shows only active memberships and supports switching", async ({ page }) => {
+  const tenantIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  try {
+    for (const [index, id] of tenantIds.entries()) {
+      await database.query(
+        "INSERT INTO tenants (id, name, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
+        [id, ["Alpha Workspace", "Beta Workspace", "Inactive Workspace", "Unrelated Workspace"][index]],
+      );
+    }
+    await database.query(
+      `INSERT INTO memberships (id, tenant_id, user_id, role, is_active, updated_at)
+       VALUES ($1, $2, $3, 'ADMIN', true, CURRENT_TIMESTAMP),
+              ($4, $5, $3, 'EMPLOYEE', true, CURRENT_TIMESTAMP),
+              ($6, $7, $3, 'ADMIN', false, CURRENT_TIMESTAMP)`,
+      [randomUUID(), tenantIds[0], userId, randomUUID(), tenantIds[1], randomUUID(), tenantIds[2]],
+    );
+    await signIn(page);
+    const companies = page.getByRole("list", { name: "Your companies" });
+    await expect(companies.getByRole("listitem")).toHaveCount(2);
+    await expect(companies).toContainText("Administrator");
+    await expect(companies).toContainText("Employee");
+    await expect(page.getByText("Inactive Workspace", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Unrelated Workspace", { exact: true })).toHaveCount(0);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(companies).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole("link", { name: "Open Alpha Workspace workspace", exact: true }).click();
+    await expect(page).toHaveURL(`/tenants/${tenantIds[0]}`);
+    await expect(page.getByRole("heading", { name: "Alpha Workspace", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Alpha Workspace", exact: true })).toBeVisible();
+
+    await page.getByRole("link", { name: "Choose another company" }).click();
+    await page.getByRole("link", { name: "Open Beta Workspace workspace", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Beta Workspace", exact: true })).toBeVisible();
+    await expect(page.getByText("Employee", { exact: true })).toBeVisible();
+
+    await page.goto(`/tenants/${tenantIds[3]}`);
+    await expect(page.getByRole("heading", { name: "Workspace unavailable" })).toBeVisible();
+    await expect(page.getByText("Unrelated Workspace", { exact: true })).toHaveCount(0);
+    await page.goto(`/tenants/${tenantIds[2]}`);
+    await expect(page.getByRole("heading", { name: "Workspace unavailable" })).toBeVisible();
+    await page.goto("/tenants/not-a-uuid");
+    await expect(page.getByRole("heading", { name: "Workspace unavailable" })).toBeVisible();
+
+    await page.goto(`/tenants/${tenantIds[0]}`);
+    await database.query("UPDATE memberships SET is_active = false WHERE tenant_id = $1 AND user_id = $2", [tenantIds[0], userId]);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Workspace unavailable" })).toBeVisible();
+    await page.goto("/dashboard");
+    await expect(page.getByRole("link", { name: "Open Alpha Workspace workspace", exact: true })).toHaveCount(0);
+  } finally {
+    await database.query("DELETE FROM memberships WHERE tenant_id = ANY($1::uuid[])", [tenantIds]);
+    await database.query("DELETE FROM tenants WHERE id = ANY($1::uuid[])", [tenantIds]);
+  }
+});
+
+test("users without active memberships see a helpful empty state", async ({ page }) => {
+  await signIn(page);
+  await expect(page.getByRole("heading", { name: "No companies available" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Your companies" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
+});
+
+test("anonymous workspace navigation redirects to sign-in", async ({ page }) => {
+  await page.goto(`/tenants/${randomUUID()}`);
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole("heading", { name: "Sign in to Mini ERP" })).toBeVisible();
+});
