@@ -262,3 +262,17 @@ docker compose -f compose.test.yaml down --volumes
 ```
 
 This command targets the test project, not the development database.
+
+## Dependency Security
+
+Scoped npm overrides pin corrected transitive versions of mysql2 and deepmerge-ts.
+CI rejects high or critical findings in the production dependency graph.
+Run the full audit as well when reviewing dependency changes:
+
+```bash
+npm audit
+npm audit --omit=dev --audit-level=high
+```
+
+A known unpatched braces finding remains in the Next.js ESLint dependency chain.
+See [SEC-001](docs/tickets/SEC-001.md) for advisories, exposure, and validation.
