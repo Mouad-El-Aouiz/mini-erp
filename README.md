@@ -66,6 +66,42 @@ Commit package.json and package-lock.json. Do not commit node_modules,
 .next, next-env.d.ts or files containing secrets. The application uses system
 fonts so its build does not require a Google Fonts download.
 
+## Local Database
+
+PostgreSQL 18 runs locally through Docker Compose.
+
+Create the local configuration:
+
+```bash
+cp -n .env.example .env
+```
+
+Set a local password in .env. Never commit this file.
+
+Start the database and wait until it is ready:
+
+```bash
+docker compose up -d --wait
+docker compose ps
+```
+
+Verify the connection:
+
+```bash
+docker compose exec db psql -U mini_erp_local -d mini_erp -c "SELECT current_database(), current_user, version();"
+```
+
+Stop the database:
+
+```bash
+docker compose down
+```
+
+Database data persists in the postgres_data named volume.
+Running docker compose down --volumes deletes that volume and its data.
+The application is not connected to the database yet.
+
+
 ## Application Structure
 
 - src/app/page.tsx: home page, rendered as a Server Component.
