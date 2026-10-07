@@ -1,0 +1,46 @@
+.workspace {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 64px) 24px;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.header h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 40px); }
+.header p { max-width: 65ch; line-height: 1.6; }
+.eyebrow { color: var(--accent); font-weight: 700; }
+.companies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+  padding: 0;
+  list-style: none;
+}
+.card, .empty {
+  background: white;
+  border: 1px solid #ced8d0;
+  border-radius: 12px;
+  padding: 24px;
+  overflow-wrap: anywhere;
+}
+.card h2, .empty h2 { margin-top: 0; }
+.card p, .empty p { line-height: 1.6; }
+.card a { display: inline-block; margin-top: 12px; font-weight: 700; }
+.workspace button {
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 16px;
+  background: white;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+}
+.workspace button:focus-visible { outline: 3px solid #946c18; outline-offset: 4px; }
+.workspace button:disabled { cursor: wait; opacity: 0.7; }
+@media (max-width: 600px) {
+  .header { flex-direction: column; }
+}

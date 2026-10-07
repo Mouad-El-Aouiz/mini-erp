@@ -28,6 +28,6 @@
 
 ## Limitations
 
-- No tenant-selection interface or membership-management interface.
+- At completion of this ticket, no tenant-selection or membership-management interface was implemented. Company selection is addressed by [TENANT-002](TENANT-002.md).
 - No administrator-only business operation implemented yet.
 - Authorization must be applied to every future tenant-owned operation.

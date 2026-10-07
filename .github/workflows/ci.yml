@@ -83,5 +83,5 @@ jobs:
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
 
-      - name: Test authentication end to end
+      - name: Test authentication and tenant access end to end
         run: npm run test:e2e
