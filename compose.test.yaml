@@ -1,0 +1,17 @@
+name: mini-erp-tests
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: mini_erp_test
+      POSTGRES_USER: mini_erp_test
+      POSTGRES_PASSWORD: test_only_password
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mini_erp_test -d mini_erp_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

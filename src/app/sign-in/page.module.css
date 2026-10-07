@@ -1,0 +1,55 @@
+.container {
+  width: min(100% - 2rem, 28rem);
+  margin: 4rem auto;
+  padding: 2rem;
+  background: white;
+  border: 1px solid #d4ddd7;
+  border-radius: 1rem;
+}
+
+.fields {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.fields input,
+.fields button {
+  width: 100%;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid #7a8b80;
+  border-radius: 0.4rem;
+  font: inherit;
+}
+
+.fields button {
+  margin-top: 0.5rem;
+  color: white;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.fields button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.fields input:focus-visible,
+.fields button:focus-visible {
+  outline: 3px solid #946c18;
+  outline-offset: 3px;
+}
+
+.error {
+  color: #a32121;
+  min-height: 1.5rem;
+}
