@@ -9,3 +9,4 @@ coverage/
 Thumbs.db
 /.vercel/
 next-env.d.ts
+/src/generated/prisma/

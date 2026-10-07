@@ -20,8 +20,24 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: mini_erp_ci
+          POSTGRES_USER: mini_erp_ci
+          POSTGRES_PASSWORD: ci_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mini_erp_ci -d mini_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
       NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: "postgresql://mini_erp_ci:ci_only_password@127.0.0.1:5432/mini_erp_ci?schema=public"
 
     steps:
       - name: Checkout repository
@@ -37,6 +53,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Verify database access
+        run: npm run db:check
 
       - name: Check TypeScript
         run: npm run typecheck

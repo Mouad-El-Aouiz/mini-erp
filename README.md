@@ -111,6 +111,62 @@ The application is not connected to the database yet.
 - tsconfig.json: strict TypeScript configuration and import aliases.
 - eslint.config.mjs: Next.js and TypeScript lint rules.
 
+## Prisma and Database Access
+
+After installing dependencies and configuring `.env`, start PostgreSQL:
+
+```bash
+docker compose up -d --wait
+```
+
+Generate the Prisma client and apply existing migrations:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+
+Verify database access:
+
+```bash
+npm run db:check
+```
+
+The verification script reads the tenant count without modifying data.
+
+### Database Changes
+
+Models are defined in `prisma/schema.prisma`.
+
+During development, prepare a migration for review:
+
+```bash
+npx prisma migrate dev --name describe_change --create-only
+```
+
+Review the generated SQL before applying it:
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+Commit the Prisma schema and migration files. Do not commit `.env`
+or the generated Prisma client.
+
+The `tenants_name_not_blank` SQL constraint rejects empty or
+whitespace-only tenant names. It is defined in the migration because
+Prisma schema syntax does not represent this CHECK constraint.
+
+The `updated_at` column is maintained by Prisma when using the client.
+Direct SQL writes must handle it explicitly.
+
+### Continuous Integration
+
+CI starts a temporary PostgreSQL database, validates the Prisma schema,
+generates the client, applies committed migrations, and verifies database
+access before running TypeScript, ESLint, and the production build.
+
 ## Additional Documents
 
 - [Technical architecture](docs/03-architecture.md)
