@@ -63,7 +63,9 @@ GitHub Actions execution remains pending until this branch is pushed and a PR is
 
 ## Dependency Audit Follow-up
 
-npm audit currently reports nine high-severity dependency entries, including
+The audit recorded during AUTH-001 reported nine high-severity dependency entries, including
 transitive dependencies of Prisma tooling and the Next.js ESLint configuration.
 No forced downgrade or automatic breaking dependency change was applied.
 Review applicable advisories and compatible fixes in a separate dependency task.
+
+Follow-up fixes and the remaining tooling advisory are recorded in [SEC-001](SEC-001.md).
