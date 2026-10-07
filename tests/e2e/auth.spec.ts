@@ -160,3 +160,91 @@ test("the credential account stores a verifiable hash instead of plaintext", asy
   expect(await verifyPassword({ password, hash: account.password! })).toBe(true);
   expect(await verifyPassword({ password: "Incorrect-password", hash: account.password! })).toBe(false);
 });
+
+test("anonymous visitors cannot access tenant information", async ({ request }) => {
+  const response = await request.get(`/api/tenants/${randomUUID()}`);
+
+  expect(response.status()).toBe(401);
+  expect(await response.json()).toEqual({
+    error: "Authentication required.",
+  });
+});
+
+test("tenant access requires an active membership", async ({ page }) => {
+  const ownTenantId = randomUUID();
+  const otherTenantId = randomUUID();
+  const membershipId = randomUUID();
+
+  try {
+    await database.query(
+      `INSERT INTO tenants (id, name, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP),
+              ($3, $4, CURRENT_TIMESTAMP)`,
+      [ownTenantId, "Own Test Company", otherTenantId, "Other Test Company"],
+    );
+
+    await database.query(
+      `INSERT INTO memberships
+         (id, tenant_id, user_id, role, updated_at)
+       VALUES ($1, $2, $3, 'EMPLOYEE', CURRENT_TIMESTAMP)`,
+      [membershipId, ownTenantId, userId],
+    );
+
+    await signIn(page);
+
+    const allowed = await page.request.get(`/api/tenants/${ownTenantId}`);
+    expect(allowed.status()).toBe(200);
+    expect(await allowed.json()).toEqual({
+      tenant: {
+        id: ownTenantId,
+        name: "Own Test Company",
+      },
+      membership: {
+        id: membershipId,
+        role: "EMPLOYEE",
+      },
+    });
+    expect(allowed.headers()["cache-control"]).toBe("private, no-store");
+
+    const denied = await page.request.get(`/api/tenants/${otherTenantId}`);
+    expect(denied.status()).toBe(403);
+    expect(await denied.json()).toEqual({ error: "Access denied." });
+
+    await database.query(
+      `UPDATE memberships
+       SET role = 'ADMIN', updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [membershipId],
+    );
+
+    const adminAllowed = await page.request.get(`/api/tenants/${ownTenantId}`);
+    expect(adminAllowed.status()).toBe(200);
+    expect((await adminAllowed.json()).membership.role).toBe("ADMIN");
+
+    const adminDenied = await page.request.get(`/api/tenants/${otherTenantId}`);
+    expect(adminDenied.status()).toBe(403);
+
+    const invalid = await page.request.get("/api/tenants/not-a-uuid");
+    expect(invalid.status()).toBe(400);
+
+    await database.query(
+      `UPDATE memberships
+       SET is_active = false, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [membershipId],
+    );
+
+    const inactive = await page.request.get(`/api/tenants/${ownTenantId}`);
+    expect(inactive.status()).toBe(403);
+    expect(await inactive.json()).toEqual({ error: "Access denied." });
+  } finally {
+    await database.query(
+      "DELETE FROM memberships WHERE id = $1",
+      [membershipId],
+    );
+    await database.query(
+      "DELETE FROM tenants WHERE id IN ($1, $2)",
+      [ownTenantId, otherTenantId],
+    );
+  }
+});
