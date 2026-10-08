@@ -8,7 +8,7 @@ import { nextPhysicalQuantity, type AdjustmentInput } from "@/lib/validation/inv
 export class InventoryConflictError extends Error {}
 const pageSize = 20;
 const movementSelect = {
-  id: true, productId: true, requestId: true, quantityDelta: true, reason: true,
+  kind:true, orderId:true, id: true, productId: true, requestId: true, quantityDelta: true, reason: true,
   recordedByMembershipId: true, createdAt: true,
   recordedBy: { select: { user: { select: { name: true } } } },
 } as const;
@@ -57,7 +57,7 @@ export async function adjustInventory(access: TenantAccess, productId: string, i
     const previous = await tx.stockMovement.findUnique({
       where: { tenantId_requestId: { tenantId: access.tenantId, requestId: input.requestId } }, select: movementSelect });
     if (previous) {
-      if (previous.productId !== productId || previous.quantityDelta !== input.quantityDelta ||
+      if (previous.kind !== "ADJUSTMENT" || previous.productId !== productId || previous.quantityDelta !== input.quantityDelta ||
           previous.reason !== input.reason || previous.recordedByMembershipId !== access.id) {
         throw new InventoryConflictError("This request identifier was already used for a different adjustment.");
       }

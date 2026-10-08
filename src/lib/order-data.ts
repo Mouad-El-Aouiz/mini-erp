@@ -22,7 +22,7 @@ type OrderRow=Prisma.OrderGetPayload<{select:typeof orderSelect}>&{
 };
 function orderRecord(row: OrderRow) {
   const { tenant, items, totalCents, ...order } = row;
-  const confirmed=row.status==="CONFIRMED";
+  const confirmed=row.status!=="DRAFT";
   const totals=confirmed?{subtotalCents:row.subtotalCents!,taxCents:row.taxCents!,
     totalCents:Number(totalCents!),taxRateBps:row.acceptedTaxRateBps!}:calculateDraftTotals(items,tenant.taxRateBps);
   return { ...order, totalCents:totalCents===null?null:Number(totalCents),
@@ -31,7 +31,7 @@ function orderRecord(row: OrderRow) {
     lineTotalCents:item.quantity * item.unitPriceCents })),
     totals, taxVersion:confirmed?row.confirmedTaxVersion!:tenant.taxVersion };
 }
-export type OrderRecord = ReturnType<typeof orderRecord>;
+export type OrderRecord = Awaited<ReturnType<typeof getOrder>>;
 export async function listOrders(access: TenantAccess, page: number) {
   const rows = await prisma.order.findMany({where:scope(access), select:{id:true,status:true,version:true,updatedAt:true,
     customerCompanyName:true, customer:{select:{companyName:true}},_count:{select:{items:true}}}, orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:(page-1)*20,take:21});
@@ -45,7 +45,15 @@ export async function getOrder(access: TenantAccess, orderId: string) {
     const customer=await tx.customer.findUniqueOrThrow({where:{tenantId_id:{tenantId:access.tenantId,id:row.customerId}},select:{id:true,companyName:true}});
     const tenant=await tx.tenant.findUniqueOrThrow({where:{id:access.tenantId},select:{taxRateBps:true,taxVersion:true}});
     const items=await tx.orderItem.findMany({where:{tenantId:access.tenantId,orderId},select:itemSelect,orderBy:{productId:"asc"}});
-    return orderRecord({...row,customer,tenant,items});
+    let delivery=null;
+    if(row.status==="DELIVERED") {
+      const record=await tx.delivery.findUniqueOrThrow({where:{tenantId_orderId:{tenantId:access.tenantId,orderId}},
+        select:{id:true,orderId:true,deliveredAt:true,deliveredByMembershipId:true}});
+      const actor=await tx.membership.findUniqueOrThrow({where:{tenantId_id:{tenantId:access.tenantId,id:record.deliveredByMembershipId}},select:{userId:true}});
+      const user=await tx.user.findUniqueOrThrow({where:{id:actor.userId},select:{name:true}});
+      delivery={...record,deliveredByName:user.name};
+    }
+    return {...orderRecord({...row,customer,tenant,items}),delivery};
   },{isolationLevel:"RepeatableRead"});
 }
 async function customerExists(tx: Prisma.TransactionClient, tenantId:string, customerId:string) {

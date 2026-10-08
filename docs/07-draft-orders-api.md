@@ -7,9 +7,9 @@ their tenant. Only ADMIN members can update the tenant tax rate. Every endpoint
 checks session and active membership; writes require Origin matching
 BETTER_AUTH_URL. All responses use Cache-Control: private, no-store.
 
-DRAFT and CONFIRMED are supported. Confirmation/reservations have a separate
-[contract](08-order-confirmation-api.md). Delivery, cancellation and draft deletion
-are not exposed. A draft
+DRAFT, CONFIRMED and DELIVERED are supported. Confirmation/reservations have a separate
+[contract](08-order-confirmation-api.md). Delivery has a separate [contract](09-order-delivery-api.md). Cancellation and draft
+deletion are not exposed. A draft
 can be empty and can contain quantities exceeding current stock: drafts never
 reserve or consume stock.
 
@@ -134,5 +134,5 @@ Referenced customers/products/memberships use RESTRICT. The 100-line aggregate
 limit and monetary subtotal limit are application rules, not SQL aggregate checks.
 
 Confirmation and reservations are implemented; see [Order confirmation](08-order-confirmation-api.md).
-Search, draft deletion/abandonment, final order numbering, delivery/cancellation,
+Search, draft deletion/abandonment, final order numbering, cancellation,
 fiscal invoicing, exports and deployment remain deferred.

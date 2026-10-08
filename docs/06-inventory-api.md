@@ -5,7 +5,8 @@
 One physical stock balance per product and tenant, at a single stock location.
 All active members can consult stock and movement history. Only administrators
 can record manual adjustments. Confirmation reserves stock; available stock equals
-physical minus reserved. Delivery and cancellation remain deferred.
+physical minus reserved. Complete delivery consumes reservations and records negative physical movements.
+Cancellation remains deferred.
 
 Catalog-created products receive a zero balance in the same transaction. The
 migration initializes existing products at zero; it never invents starting
@@ -53,7 +54,7 @@ and an Origin matching BETTER_AUTH_URL's origin.
 
 The server supplies the tenant, actor membership, movement ID and timestamp.
 Movement records expose id, productId, requestId, quantityDelta, reason,
-recordedByMembershipId, recordedByName and createdAt. The actor name is the
+recordedByMembershipId, recordedByName, createdAt, kind and orderId. The actor name is the
 current user name; stable membership identity is retained independently.
 
 ## Retry safety and concurrency
@@ -87,6 +88,11 @@ Unsupported methods return 405. Unexpected failures use the framework's 500 path
 
 ## History and database guarantees
 
+Movement kind is ADJUSTMENT or DELIVERY. ADJUSTMENT has no orderId; DELIVERY
+links to a recorded complete delivery and its exact order/product line. Delivery
+creates one negative movement per product in the same transaction as balances and
+reservation consumption. The manual endpoint cannot replay a delivery request ID.
+
 There is no endpoint to edit or delete movements. Correct errors with a
 compensating adjustment and a reason. SQL CHECK constraints reject negative
 balances, zero deltas and blank/oversized reasons. Composite foreign keys enforce
@@ -94,7 +100,7 @@ same-tenant product and actor references. Unique tenant/requestId prevents
 repeated movement records. Referenced products and memberships cannot be deleted.
 
 Movement history is append-only through this application, not tamper-proof
-against privileged direct SQL. Quantity/history reconciliation, operational
-alerts and separate database roles are future work. A derived balance can cascade
+against privileged direct SQL. Tests reconcile delivery quantities against movements and active reservations.
+Operational reconciliation, alerts and separate database roles are future work. A derived balance can cascade
 when deleting a product without movements; historical movement references use
 RESTRICT. Product deletion is not exposed by the application.

@@ -39,7 +39,7 @@ async function reviewed(page:Page,id:string){const order=await read(page,id);ret
 const confirm=(page:Page,id:string,data:{version:number;taxVersion:number})=>page.request.post(`${api}/${id}/confirm`,{headers,data});
 async function quantities(id:string) {
   const row=(await database.query("SELECT physical_quantity,reserved_quantity FROM inventory_balances WHERE tenant_id=$1 AND product_id=$2",[tenantId,id])).rows[0];
-  const reservations=(await database.query("SELECT coalesce(sum(quantity),0) AS quantity FROM stock_reservations WHERE tenant_id=$1 AND product_id=$2",[tenantId,id])).rows[0];
+  const reservations=(await database.query("SELECT coalesce(sum(quantity),0) AS quantity FROM stock_reservations WHERE tenant_id=$1 AND product_id=$2 AND status='ACTIVE'",[tenantId,id])).rows[0];
   expect(row.reserved_quantity).toBe(Number(reservations.quantity));return row as {physical_quantity:number;reserved_quantity:number};
 }
 const reservationCount=async(id:string)=>Number((await database.query("SELECT count(*) FROM stock_reservations WHERE tenant_id=$1 AND order_id=$2",[tenantId,id])).rows[0].count);

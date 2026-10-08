@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Tenant, authentication records, Membership, Customer, Product, InventoryBalance with physical/reserved quantities, manual StockMovement, Order/OrderItem and StockReservation are implemented. DRAFT and CONFIRMED are supported. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership, Customer, Product, InventoryBalance with physical/reserved quantities, manual StockMovement, Order/OrderItem, StockReservation and complete Delivery are implemented. DRAFT, CONFIRMED and DELIVERED are supported. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
@@ -105,7 +105,7 @@ A SKU identifies a catalog product, not an individual serialized device. Serial 
 
 ## Order
 
-Implemented draft preparation and DRAFT → CONFIRMED. Confirmation stores the accepted tax rate/version, subtotal, rounded tax, total, customer company name, timestamp and same-tenant confirming actor. Delivery/cancellation fields remain proposed. See [Draft orders API](07-draft-orders-api.md) and [Order confirmation](08-order-confirmation-api.md).
+Implemented draft preparation and DRAFT → CONFIRMED. Confirmation stores the accepted tax rate/version, subtotal, rounded tax, total, customer company name, timestamp and same-tenant confirming actor. Delivery records are implemented; cancellation fields remain proposed. See [Draft orders API](07-draft-orders-api.md) and [Order confirmation](08-order-confirmation-api.md).
 
 A customer's order within one tenant.
 
@@ -114,7 +114,7 @@ A customer's order within one tenant.
 | id | Primary key |
 | tenant_id | Required foreign key to Tenant |
 | customer_id | Required same-tenant reference to Customer |
-| status | DRAFT or CONFIRMED; DELIVERED/CANCELLED deferred |
+| status | DRAFT, CONFIRMED or DELIVERED; CANCELLED deferred |
 | currency | USD |
 | subtotal_cents | Accepted subtotal snapshot; required after confirmation |
 | accepted_tax_rate_bps | Accepted rate snapshot; required after confirmation |
@@ -130,7 +130,7 @@ A customer's order within one tenant.
 | confirmed_at | Required after confirmation |
 | cancelled_at | Required when cancelled |
 
-Snapshot amounts are nonnegative and total_cents equals subtotal_cents plus tax_cents. Draft previews are derived from captured line prices and current settings; they are not confirmed financial records. PostgreSQL checks require all snapshot fields to be absent for DRAFT and complete/consistent for CONFIRMED. total_cents uses BIGINT, bounded by the supported subtotal and tax rate, and serializes as a safe JSON number.
+Snapshot amounts are nonnegative and total_cents equals subtotal_cents plus tax_cents. Draft previews are derived from captured line prices and current settings; they are not confirmed financial records. PostgreSQL checks require all snapshot fields to be absent for DRAFT and complete/consistent for CONFIRMED and DELIVERED. total_cents uses BIGINT, bounded by the supported subtotal and tax rate, and serializes as a safe JSON number.
 
 Proposed transitions: DRAFT to CONFIRMED, then CONFIRMED to DELIVERED or CANCELLED. The server enforces legal transitions; a status check constraint alone does not enforce the workflow.
 
@@ -188,17 +188,22 @@ as the reserved balance and accepted snapshots.
 | product_id | Required product on the referenced order line |
 | quantity | 1–1000000, matches the confirmed line in the application |
 | created_at | Reservation timestamp |
+| status | ACTIVE or CONSUMED |
+| consumed_at | Required only for CONSUMED |
 
 Primary key (tenant_id, order_id, product_id). Composite foreign keys reference
 Order, Product and the exact OrderItem. SQL rejects duplicate reservations and
 invalid quantities. The counter/row aggregate equality is maintained by the
 application transaction, not a SQL aggregate constraint.
 
-All current reservations are outstanding. Delivery/cancellation and reservation
-closure fields are deferred. A later migration must introduce traceable consumption
-and release before these transitions are exposed.
+Reservations have ACTIVE or CONSUMED status. Delivery retains every reservation
+with consumed_at set, while decreasing reserved quantities. SQL enforces status/date
+consistency. Cancellation and reservation release remain deferred.
 
 ## Delivery
+
+Implemented: complete delivery by either active role with safe retries and an
+expected confirmed-order version. See [Delivery API](09-order-delivery-api.md).
 
 The single complete delivery of a confirmed order.
 
@@ -207,14 +212,14 @@ The single complete delivery of a confirmed order.
 | id | Primary key |
 | tenant_id | Required foreign key to Tenant |
 | order_id | Required same-tenant reference to Order |
-| recorded_by_membership_id | Required same-tenant actor |
+| delivered_by_membership_id | Required same-tenant actor |
 | delivered_at | Required timestamp |
 
 Unique (tenant_id, order_id) enforces at most one delivery per order. Fulfilled quantities are the frozen order lines; no partial-delivery quantities are accepted. Delivery and inventory updates commit together.
 
 ## StockMovement
 
-Implemented: append-only manual adjustments through the application, with stable same-tenant actor references. Privileged direct SQL is not blocked from changing history. Delivery-specific fields and kinds below remain proposed.
+Implemented: manual adjustments and complete delivery movements, append-only through the application, with stable same-tenant actor references. Privileged direct SQL is not blocked from changing history.
 
 | Field | Constraint or purpose |
 | --- | --- |
@@ -223,10 +228,9 @@ Implemented: append-only manual adjustments through the application, with stable
 | product_id | Required same-tenant reference to Product |
 | request_id | Implemented UUID, unique with tenant_id; repeated identical requests apply once |
 | quantity_delta | Required nonzero signed integer |
-| kind | Proposed future field: INITIAL, ADJUSTMENT or DELIVERY |
-| delivery_id | Proposed same-tenant reference; required for DELIVERY |
-| order_item_id | Proposed: required for DELIVERY, otherwise absent |
-| reason | Required, nonblank for INITIAL and ADJUSTMENT |
+| kind | ADJUSTMENT or DELIVERY |
+| order_id | Required for DELIVERY, absent for ADJUSTMENT; references the same-tenant Delivery and exact OrderItem |
+| reason | Required, nonblank for every movement |
 | recorded_by_membership_id | Required same-tenant actor |
 | created_at | Required timestamp |
 
@@ -234,7 +238,7 @@ Positive deltas increase physical stock; negative deltas decrease it. Delivery d
 
 Enforce one delivery movement per delivered order line, using a conditional uniqueness constraint or an equivalent database-specific design. Confirmation and cancellation do not create physical movements.
 
-Record initial stock and administrator adjustments as movements in the same transaction as balance changes. Implemented adjustments reject negative physical stock. Rejecting stock lower than active reservations belongs to the future reservation module. Correct mistakes through compensating movements, not edits to history.
+Record initial stock and administrator adjustments as movements in the same transaction as balance changes. Implemented adjustments reject negative physical stock. Adjustments also reject stock lower than active reservations. Correct mistakes through compensating movements, not edits to history.
 
 ## Tenant-Safe Relationships
 
@@ -267,7 +271,7 @@ Delivery: validate actor and CONFIRMED state; create the complete delivery, cons
 
 Cancellation: validate tenant administrator and CONFIRMED state; release reservations, decrease reserved balances and set CANCELLED in one transaction without changing physical stock.
 
-Use database-supported locking or conditional updates so competing transitions and stock allocations cannot both pass stale checks. Confirmation uses PostgreSQL row locks in a stable product UUID order and a 15-second transaction timeout. Unexpected failures require an explicit retry; no automatic transaction retry is implemented.
+Use database-supported locking or conditional updates so competing transitions and stock allocations cannot both pass stale checks. Confirmation and delivery use PostgreSQL row locks in a stable product UUID order and a 15-second transaction timeout. Unexpected failures require an explicit retry; no automatic transaction retry is implemented.
 
 Price and tax snapshots must be consistent at confirmation, including concurrent catalog/settings changes. A check performed outside the transaction is insufficient.
 

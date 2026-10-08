@@ -107,9 +107,10 @@ model Membership {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  ordersConfirmed Order[]         @relation("ConfirmedBy")
-  ordersCreated   Order[]
-  stockMovements  StockMovement[]
+  deliveriesRecorded Delivery[]
+  ordersConfirmed    Order[]         @relation("ConfirmedBy")
+  ordersCreated      Order[]
+  stockMovements     StockMovement[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, userId])
@@ -178,21 +179,31 @@ model InventoryBalance {
   @@map("inventory_balances")
 }
 
+enum StockMovementKind {
+  ADJUSTMENT
+  DELIVERY
+}
+
 model StockMovement {
-  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId               String   @map("tenant_id") @db.Uuid
-  productId              String   @map("product_id") @db.Uuid
-  requestId              String   @map("request_id") @db.Uuid
+  id                     String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String            @map("tenant_id") @db.Uuid
+  productId              String            @map("product_id") @db.Uuid
+  requestId              String            @map("request_id") @db.Uuid
   /// Nonzero signed units; enforced by stock_movements_delta_non_zero in SQL.
-  quantityDelta          Int      @map("quantity_delta")
+  quantityDelta          Int               @map("quantity_delta")
+  kind                   StockMovementKind @default(ADJUSTMENT)
+  orderId                String?           @map("order_id") @db.Uuid
+  delivery               Delivery?         @relation(fields: [tenantId, orderId], references: [tenantId, orderId], onDelete: Restrict)
+  orderItem              OrderItem?        @relation(fields: [tenantId, orderId, productId], references: [tenantId, orderId, productId], onDelete: Restrict)
   reason                 String
-  recordedByMembershipId String   @map("recorded_by_membership_id") @db.Uuid
-  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  recordedByMembershipId String            @map("recorded_by_membership_id") @db.Uuid
+  createdAt              DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
   product    Product    @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
   recordedBy Membership @relation(fields: [tenantId, recordedByMembershipId], references: [tenantId, id], onDelete: Restrict)
 
   @@unique([tenantId, requestId])
+  @@unique([tenantId, orderId, productId])
   @@index([tenantId, productId, createdAt, id])
   @@index([tenantId, recordedByMembershipId])
   @@map("stock_movements")
@@ -201,6 +212,7 @@ model StockMovement {
 enum OrderStatus {
   DRAFT
   CONFIRMED
+  DELIVERED
 }
 
 model Order {
@@ -231,6 +243,7 @@ model Order {
   customer  Customer    @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
   createdBy Membership  @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
   items     OrderItem[]
+  delivery  Delivery?
 
   @@unique([tenantId, id])
   @@unique([tenantId, requestId])
@@ -251,7 +264,8 @@ model OrderItem {
   productName    String @map("product_name")
   productSku     String @map("product_sku")
 
-  reservation StockReservation?
+  reservation      StockReservation?
+  deliveryMovement StockMovement?
 
   order   Order   @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
   product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
@@ -261,12 +275,19 @@ model OrderItem {
   @@map("order_items")
 }
 
+enum ReservationStatus {
+  ACTIVE
+  CONSUMED
+}
+
 model StockReservation {
-  tenantId  String   @map("tenant_id") @db.Uuid
-  orderId   String   @map("order_id") @db.Uuid
-  productId String   @map("product_id") @db.Uuid
-  quantity  Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  tenantId   String            @map("tenant_id") @db.Uuid
+  orderId    String            @map("order_id") @db.Uuid
+  productId  String            @map("product_id") @db.Uuid
+  status     ReservationStatus @default(ACTIVE)
+  consumedAt DateTime?         @map("consumed_at") @db.Timestamptz(3)
+  quantity   Int
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
   order   Order   @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
   product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
@@ -276,4 +297,20 @@ model StockReservation {
   @@id([tenantId, orderId, productId])
   @@index([tenantId, productId])
   @@map("stock_reservations")
+}
+
+model Delivery {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  orderId                 String   @map("order_id") @db.Uuid
+  deliveredByMembershipId String   @map("delivered_by_membership_id") @db.Uuid
+  deliveredAt             DateTime @default(now()) @map("delivered_at") @db.Timestamptz(3)
+
+  order       Order           @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  deliveredBy Membership      @relation(fields: [tenantId, deliveredByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  movements   StockMovement[]
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, deliveredByMembershipId])
+  @@map("deliveries")
 }

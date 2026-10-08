@@ -21,3 +21,6 @@ export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>;
 
 export const confirmOrderSchema = z.strictObject({ version: versionSchema, taxVersion: versionSchema });
 export type ConfirmOrderInput = z.infer<typeof confirmOrderSchema>;
+
+export const deliverOrderSchema = z.strictObject({ version: versionSchema });
+export type DeliverOrderInput = z.infer<typeof deliverOrderSchema>;
