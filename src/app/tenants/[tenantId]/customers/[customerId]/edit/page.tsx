@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireCustomerPageAccess } from "@/lib/customer-page-access";
+import { requireTenantPageAccess } from "@/lib/tenant-page-access";
 import { getCustomer, CustomerNotFoundError } from "@/lib/customer-data";
 import { customerIdSchema } from "@/lib/validation/customer";
 import { CustomerForm } from "../../customer-form";
@@ -10,7 +10,7 @@ export default async function EditCustomerPage({ params }: {
   params: Promise<{ tenantId: string; customerId: string }>;
 }) {
   const { tenantId, customerId } = await params;
-  const access = await requireCustomerPageAccess(tenantId);
+  const access = await requireTenantPageAccess(tenantId);
   if (!customerIdSchema.safeParse(customerId).success) notFound();
   const customer = await getCustomer(access, customerId).catch((error: unknown) => {
     if (error instanceof CustomerNotFoundError) notFound();

@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { customerSchema, type CustomerInput } from "@/lib/validation/customer";
-import styles from "./customers.module.css";
+import styles from "../business.module.css";
 
 type InitialCustomer = CustomerInput & { id: string };
 type Field = keyof CustomerInput;
