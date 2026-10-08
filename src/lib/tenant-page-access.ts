@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { requireTenantAccess, TenantAccessError } from "@/lib/tenant-access";
 
-export async function requireCustomerPageAccess(tenantId: string) {
+export async function requireTenantPageAccess(tenantId: string) {
   const access = await requireTenantAccess(tenantId).catch((error: unknown) => {
     if (error instanceof TenantAccessError) {
       if (error.code === "UNAUTHENTICATED") redirect("/sign-in");

@@ -46,11 +46,4 @@ export const customerSchema = z.strictObject({
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;
-export const customerIdSchema = z.string().regex(
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-);
-
-export const customerPageSchema = z.string()
-  .regex(/^[1-9][0-9]{0,3}$/)
-  .default("1")
-  .transform(Number);
+export { entityIdSchema as customerIdSchema, pageNumberSchema as customerPageSchema } from "./common";

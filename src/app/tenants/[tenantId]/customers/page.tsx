@@ -1,16 +1,16 @@
 import Link from "next/link";
-import { requireCustomerPageAccess } from "@/lib/customer-page-access";
+import { requireTenantPageAccess } from "@/lib/tenant-page-access";
 import { listCustomers } from "@/lib/customer-data";
 import { customerPageSchema } from "@/lib/validation/customer";
 import workspace from "@/app/dashboard/workspace.module.css";
-import styles from "./customers.module.css";
+import styles from "../business.module.css";
 
 export default async function CustomersPage({ params, searchParams }: {
   params: Promise<{ tenantId: string }>;
   searchParams: Promise<{ page?: string | string[]; saved?: string | string[] }>;
 }) {
   const { tenantId } = await params;
-  const access = await requireCustomerPageAccess(tenantId);
+  const access = await requireTenantPageAccess(tenantId);
   const query = await searchParams;
   const page = customerPageSchema.safeParse(query.page);
   const baseURL = `/tenants/${access.tenantId}/customers`;

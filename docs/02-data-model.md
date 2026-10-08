@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Tenant, authentication records, Membership and Customer are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership, Customer and Product are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
@@ -85,6 +85,8 @@ Customer names are not automatically unique. Duplicate handling and archival/del
 
 ## Product
 
+Implemented: tenant-scoped listing and reading for active members; creation and full editing for administrators. See [Products API](05-products-api.md).
+
 A tenant's hardware catalog entry.
 
 | Field | Constraint or purpose |
@@ -97,7 +99,9 @@ A tenant's hardware catalog entry.
 | created_at | Required timestamp |
 | updated_at | Required timestamp |
 
-Unique (tenant_id, sku). A SKU identifies a catalog product, not an individual serialized device. Serial numbers and warranties are deferred. Historical order references prevent deleting a referenced product; define product retirement separately.
+Unique (tenant_id, sku) and (tenant_id, id). SKUs are trimmed uppercase ASCII identifiers of at most 64 characters. Prices range from 0 to 2147483647 USD cents. Index (tenant_id, name, id) supports ordered listing. SQL CHECK constraints enforce SKU format, nonblank names and nonnegative prices.
+
+A SKU identifies a catalog product, not an individual serialized device. Serial numbers and warranties are deferred. Future historical order references must prevent deleting a referenced product; define product retirement separately.
 
 ## Order
 

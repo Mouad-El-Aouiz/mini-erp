@@ -2,7 +2,8 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { TenantAccessError, type requireTenantAccess } from "@/lib/tenant-access";
+import type { requireTenantAccess } from "@/lib/tenant-access";
+import { lockActiveMembership } from "@/lib/membership-lock";
 import type { CustomerInput } from "@/lib/validation/customer";
 
 export type CustomerAccess = Awaited<ReturnType<typeof requireTenantAccess>>;
@@ -41,18 +42,6 @@ export async function getCustomer(access: CustomerAccess, customerId: string) {
   });
   if (!customer) throw new CustomerNotFoundError();
   return customer;
-}
-
-async function lockActiveMembership(transaction: Prisma.TransactionClient, access: CustomerAccess) {
-  // Hold a shared row lock until the write commits so concurrent revocation
-  // cannot slip between the membership check and the customer mutation.
-  const memberships = await transaction.$queryRaw<{ id: string }[]>`
-    SELECT id FROM memberships
-    WHERE id = ${access.id}::uuid AND tenant_id = ${access.tenantId}::uuid
-      AND user_id = ${access.userId} AND is_active = true
-    FOR SHARE
-  `;
-  if (memberships.length === 0) throw new TenantAccessError("FORBIDDEN");
 }
 
 export async function createCustomer(access: CustomerAccess, input: CustomerInput) {

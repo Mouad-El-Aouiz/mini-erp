@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, plus the role-protected product catalog, are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -52,7 +52,7 @@ npm run dev
 ```
 
 Open http://localhost:3000. Stop the development server with Ctrl+C.
-The home page displays planned modules; it does not provide business operations yet.
+The home page summarizes module availability. Sign in and select a company to manage its customers and products.
 
 ## Quality Checks
 
@@ -170,7 +170,7 @@ Direct SQL writes must handle it explicitly.
 CI starts a temporary PostgreSQL database, validates the Prisma schema,
 generates the client, applies committed migrations, and verifies database
 access before running TypeScript, ESLint, and the production build. It then
-runs authentication browser tests against that build and the temporary database.
+runs unit tests and the full application browser/integration suite against that build and the temporary database.
 
 ## Additional Documents
 
@@ -292,7 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. The workspace links to customer management; products, orders and inventory remain deferred.
+must enforce their own tenant and role checks. The workspace links to customer and product management; orders and inventory remain deferred.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -320,7 +320,7 @@ access. This script does not reactivate a revoked membership or promote an
 existing employee. Concurrent conflicting setup runs may fail; rerun after the
 first completes.
 
-Sign in and open `/dashboard` to select the demo company and manage its customers. This is a local setup utility, not production onboarding.
+Sign in and open `/dashboard` to select the demo company and manage its customers and products. This is a local setup utility, not production onboarding.
 See [SETUP-002](docs/tickets/SETUP-002.md).
 
 ## Business Customers
@@ -353,3 +353,21 @@ the production build and application integration/browser checks.
 
 See [Customers API](docs/04-customers-api.md) and
 [CUSTOMER-001](docs/tickets/CUSTOMER-001.md) for contracts and decisions.
+
+## Product Catalog
+
+Select **Manage products** in the company workspace. Active members can consult
+the catalog; only administrators see creation/edit links and can save changes.
+Each product has a company-unique uppercase SKU, a name, and a tax-exclusive USD
+unit price. The UI accepts amounts such as 129.99; the database stores 12999 cents.
+A conflicting SKU produces a field error while preserving form input.
+
+Pages:
+
+- `/tenants/[tenantId]/products`: list, 20 records per page.
+- `/tenants/[tenantId]/products/new`: administrator creation form.
+- `/tenants/[tenantId]/products/[productId]/edit`: administrator edit form.
+
+Product writes use the same session, tenant and Origin policy as customers and
+add the ADMIN role requirement. Stock, taxes, orders and deletion are deferred.
+See [Products API](docs/05-products-api.md) and [PRODUCT-001](docs/tickets/PRODUCT-001.md).
