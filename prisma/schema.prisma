@@ -14,6 +14,10 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  taxRateBps Int     @default(1000) @map("tax_rate_bps")
+  taxVersion Int     @default(1) @map("tax_version")
+  orders     Order[]
+
   memberships Membership[]
   customers   Customer[]
   products    Product[]
@@ -103,6 +107,7 @@ model Membership {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
+  ordersCreated  Order[]
   stockMovements StockMovement[]
 
   @@unique([tenantId, id])
@@ -125,6 +130,8 @@ model Customer {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  orders Order[]
+
   @@unique([tenantId, id])
   @@index([tenantId, companyName, id])
   @@map("customers")
@@ -144,6 +151,7 @@ model Product {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  orderItems       OrderItem[]
   inventoryBalance InventoryBalance?
   stockMovements   StockMovement[]
 
@@ -184,4 +192,51 @@ model StockMovement {
   @@index([tenantId, productId, createdAt, id])
   @@index([tenantId, recordedByMembershipId])
   @@map("stock_movements")
+}
+
+enum OrderStatus {
+  DRAFT
+}
+
+model Order {
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId              String      @map("tenant_id") @db.Uuid
+  customerId            String      @map("customer_id") @db.Uuid
+  createdByMembershipId String      @map("created_by_membership_id") @db.Uuid
+  requestId             String      @map("request_id") @db.Uuid
+  requestHash           String      @map("request_hash")
+  status                OrderStatus @default(DRAFT)
+  version               Int         @default(1)
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer  Customer    @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  createdBy Membership  @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  items     OrderItem[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, requestId])
+  @@index([tenantId, updatedAt, id])
+  @@index([tenantId, customerId])
+  @@index([tenantId, createdByMembershipId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  orderId        String @map("order_id") @db.Uuid
+  productId      String @map("product_id") @db.Uuid
+  quantity       Int
+  unitPriceCents Int    @map("unit_price_cents")
+  productName    String @map("product_name")
+  productSku     String @map("product_sku")
+
+  order   Order   @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, orderId, productId])
+  @@index([tenantId, productId])
+  @@map("order_items")
 }

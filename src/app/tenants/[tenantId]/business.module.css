@@ -7,9 +7,9 @@
 .fields { border: 0; padding: 0; margin: 0; display: grid; gap: 20px; }
 .field { display: grid; gap: 8px; }
 .field label { font-weight: 700; }
-.field input, .field textarea { width: 100%; min-width: 0; padding: 12px; font: inherit; font-size: 16px; color: var(--foreground); background: white; border: 1px solid #87978c; border-radius: 6px; }
+.field input, .field textarea, .field select { width: 100%; min-width: 0; padding: 12px; font: inherit; font-size: 16px; color: var(--foreground); background: white; border: 1px solid #87978c; border-radius: 6px; }
 .field textarea { resize: vertical; min-height: 110px; }
-.field input:focus-visible, .field textarea:focus-visible { outline: 3px solid #946c18; outline-offset: 2px; }
+.field input:focus-visible, .field textarea:focus-visible, .field select:focus-visible { outline: 3px solid #946c18; outline-offset: 2px; }
 .field input[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #a12b2b; }
 .error { color: #a12b2b; margin: 0; }
 .notice { padding: 12px; background: #e5f1e9; border-radius: 6px; }

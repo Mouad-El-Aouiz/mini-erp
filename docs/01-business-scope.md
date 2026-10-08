@@ -94,7 +94,7 @@ authorized tenant.
 | Adjust stock manually | Yes | No |
 | Manage users and roles | Yes | No |
 
-Customer deletion and archival rules remain to be defined.
+Customer deletion and archival rules remain to be defined. Draft deletion is deferred; drafts may be empty. Each product appears once per draft, with quantities from 1 to 1000000 and at most 100 lines.
 
 ## Draft Pricing
 
@@ -126,6 +126,7 @@ Use USD as the single currency.
 
 Catalog prices exclude tax.
 The approved demonstration tax rate is 10% and remains configurable.
+Tax configuration supports 0–100%, with 0.01 percentage-point precision.
 
 Calculate:
 
@@ -137,7 +138,7 @@ The server calculates monetary totals rather than trusting
 totals supplied by the browser.
 
 Use integer cents or exact decimal values for monetary calculations.
-The precise representation and rounding policy remain to be defined.
+Implemented draft previews use integer cents and calculate tax once on the subtotal, rounded half up to the nearest cent. The supported subtotal is at most 2147483647 cents.
 
 Store the accepted tax rate and monetary totals when an order
 is confirmed. Later tax configuration changes must not rewrite
@@ -161,8 +162,7 @@ or fiscal compliance.
 ## Open Questions
 
 - Confirm the proposed stock reservation policy.
-- Define monetary representation and rounding.
-- Define tax rate precision and limits.
+- Define confirmed-order snapshots and final numbering.
 - Define draft deletion or abandonment.
 - Define customer duplicate handling, deletion and archival.
 

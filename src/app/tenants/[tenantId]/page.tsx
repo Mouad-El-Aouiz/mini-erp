@@ -38,10 +38,12 @@ export default async function TenantWorkspacePage({
       </header>
       <section className={styles.empty} aria-labelledby="workspace-title">
         <h2 id="workspace-title">Company workspace</h2>
-        <p>Manage the customers, product catalog and stock of this company.</p>
+        <p>Manage the customers, product catalog, stock and draft orders of this company.</p>
         <Link href={`/tenants/${tenant.id}/customers`} prefetch={false}>Manage customers</Link>
         <p><Link href={`/tenants/${tenant.id}/products`} prefetch={false}>Manage products</Link></p>
         <p><Link href={`/tenants/${tenant.id}/inventory`} prefetch={false}>Manage inventory</Link></p>
+        <p><Link href={`/tenants/${tenant.id}/orders`} prefetch={false}>Manage orders</Link></p>
+        {membership.role === "ADMIN" && <p><Link href={`/tenants/${tenant.id}/tax-settings`} prefetch={false}>Tax settings</Link></p>}
       </section>
     </main>
   );

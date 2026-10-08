@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Tenant, authentication records, Membership, Customer, Product, physical InventoryBalance and manual StockMovement are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership, Customer, Product, physical InventoryBalance and manual StockMovement, draft Order and OrderItem are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
@@ -8,7 +8,7 @@ Status: Tenant, authentication records, Membership, Customer, Product, physical 
 - Use stable primary keys. Implemented tenants, memberships and customers use UUIDs; Better Auth user and authentication IDs use text. Types for remaining entities will be selected during implementation.
 - Use required fields, foreign keys, uniqueness and check constraints alongside server validation.
 - Every tenant-owned entity has a required tenant_id referencing Tenant.
-- Use integer USD cents for monetary amounts as a proposed technical representation. Select database types and safe arithmetic limits before implementation.
+- Use integer USD cents for monetary amounts. Draft calculations use exact BigInt intermediates and bounded safe-number responses.
 - Store timestamps consistently; timezone and display formatting are separate concerns.
 - Historical records use restricted deletion. Disposable derived zero balances may cascade with products; movements prevent deleting referenced products.
 
@@ -105,6 +105,8 @@ A SKU identifies a catalog product, not an individual serialized device. Serial 
 
 ## Order
 
+Implemented draft creation, editing and current tax previews. Only DRAFT exists today. Confirmation/fulfillment fields and statuses described below remain proposed. See [Draft orders API](07-draft-orders-api.md).
+
 A customer's order within one tenant.
 
 | Field | Constraint or purpose |
@@ -134,6 +136,8 @@ A confirmable order must contain at least one line. Customer details may change;
 
 ## OrderItem
 
+Implemented: captured product name/SKU/price, quantity, same-tenant order/product references and unique product per draft. Stable line IDs survive quantity changes.
+
 One product and quantity within an order.
 
 | Field | Constraint or purpose |
@@ -145,7 +149,9 @@ One product and quantity within an order.
 | quantity | Required positive integer |
 | unit_price_cents | Required nonnegative captured price |
 
-Proposed uniqueness: (tenant_id, order_id, product_id), combining repeated additions into one line. This is a design proposal, not an approved business decision.
+Implemented uniqueness: (tenant_id, order_id, product_id). Repeated additions in the UI increase the existing quantity; duplicate IDs in API input are rejected.
+
+Order version checks reject stale edits. Creation request IDs are tenant-unique and retain the initial request fingerprint. Per-tenant tax_rate_bps defaults to 1000 and tax_version protects updates. Draft totals are derived; confirmed snapshots remain deferred.
 
 Capture the catalog price when adding a line. A changed catalog price blocks confirmation until the user explicitly refreshes prices. Recheck at confirmation. Freeze lines and accepted totals after confirmation.
 
