@@ -18,3 +18,6 @@ export type CreateDraftInput = z.infer<typeof createDraftSchema>;
 export type UpdateDraftInput = z.infer<typeof updateDraftSchema>;
 export type RefreshPricesInput = z.infer<typeof refreshPricesSchema>;
 export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>;
+
+export const confirmOrderSchema = z.strictObject({ version: versionSchema, taxVersion: versionSchema });
+export type ConfirmOrderInput = z.infer<typeof confirmOrderSchema>;

@@ -4,8 +4,8 @@
 
 One physical stock balance per product and tenant, at a single stock location.
 All active members can consult stock and movement history. Only administrators
-can record manual adjustments. Reservations, order delivery and available stock
-calculations are deferred until the order workflow is approved and implemented.
+can record manual adjustments. Confirmation reserves stock; available stock equals
+physical minus reserved. Delivery and cancellation remain deferred.
 
 Catalog-created products receive a zero balance in the same transaction. The
 migration initializes existing products at zero; it never invents starting
@@ -18,9 +18,10 @@ zero and the first adjustment initializes it transactionally.
 | Method | Path | Response |
 | --- | --- | --- |
 | GET | /api/tenants/{tenantId}/inventory | inventory, page, pageSize, hasNextPage |
-| GET | /api/tenants/{tenantId}/inventory/{productId}/movements | product, physicalQuantity, movements, page, pageSize, hasNextPage |
+| GET | /api/tenants/{tenantId}/inventory/{productId}/movements | product, physicalQuantity, reservedQuantity, availableQuantity, movements, page, pageSize, hasNextPage |
 | POST | /api/tenants/{tenantId}/inventory/{productId}/movements | movement, replayed |
 
+Inventory records include physicalQuantity, reservedQuantity and availableQuantity.
 Lists use 20 records per page. Inventory orders by product name/id ascending;
 history orders by createdAt/id descending. The single page parameter accepts
 1–9999, defaults to 1, and returns empty pages past the end. History quantity and
@@ -47,7 +48,8 @@ and an Origin matching BETTER_AUTH_URL's origin.
 - quantityDelta: nonzero signed integer JSON number, -2147483647–2147483647.
 - reason: required trimmed string, 1–500 characters.
 - Extra fields, including tenantId, actor IDs and final stock, are rejected.
-- The resulting physical quantity must remain between 0 and 2147483647.
+- The resulting physical quantity must remain between reservedQuantity and 2147483647.
+- A correction cannot consume units already reserved by confirmed orders.
 
 The server supplies the tenant, actor membership, movement ID and timestamp.
 Movement records expose id, productId, requestId, quantityDelta, reason,
@@ -71,15 +73,15 @@ resubmit it as a replacement.
 Each write transaction locks the active ADMIN membership, serializes the
 request ID with a PostgreSQL advisory lock, then locks the tenant's product row.
 It checks the latest physical quantity, updates the balance and inserts the
-movement together. Any failure rolls back both changes. All future stock
-writers must follow the same product-lock protocol. Concurrent withdrawals
+movement together. Any failure rolls back both changes. Order confirmation uses the same product-lock protocol. All future stock
+writers must follow it too. Concurrent withdrawals
 cannot independently spend the same units.
 
 ## Errors
 
 400: malformed identifiers, JSON or pagination; 401: missing authentication;
 403: inactive/missing membership, insufficient role or untrusted origin;
-404: unavailable product; 409: insufficient stock, stock limit overflow or key
+404: unavailable product; 409: insufficient available stock, stock limit overflow or key
 reuse with different data; 415: wrong media type; 422: invalid fields.
 Unsupported methods return 405. Unexpected failures use the framework's 500 path.
 

@@ -4,8 +4,8 @@ import styles from "./page.module.css";
 const modules = [
   { number: "01", available: true, name: "Customers", description: "Keep business contacts and customer records in one place." },
   { number: "02", available: true, name: "Products", description: "Organize your hardware catalog and tax-exclusive prices." },
-  { number: "03", available: true, name: "Orders", description: "Prepare draft orders with captured prices and tax previews." },
-  { number: "04", available: true, name: "Inventory", description: "Track physical stock and the history of stock adjustments." },
+  { number: "03", available: true, name: "Orders", description: "Prepare and confirm orders with accepted prices and reserved stock." },
+  { number: "04", available: true, name: "Inventory", description: "Track physical, reserved and available stock with adjustment history." },
 ];
 
 export default function Home() {
@@ -21,7 +21,7 @@ export default function Home() {
           <p className={styles.eyebrow}>B2B HARDWARE OPERATIONS</p>
           <h1 id="welcome-title">A clearer view of<br />your business.</h1>
           <p className={styles.intro}>One workspace for your customers, products, orders and inventory.</p>
-          <p className={styles.notice}>Customers, products, stock and draft orders are available. Order confirmation and delivery are coming next.</p>
+          <p className={styles.notice}>Customers, products, inventory and order confirmation are available. Delivery and cancellation are coming next.</p>
         </section>
         <section aria-labelledby="modules-title">
           <div className={styles.sectionHeading}>

@@ -1,6 +1,6 @@
 import { requireTenantAccess } from "@/lib/tenant-access";
 import { isTrustedOrigin } from "@/lib/request-origin";
-import { getDraft, updateDraft } from "@/lib/order-data";
+import { getOrder, updateDraft } from "@/lib/order-data";
 import { orderErrorResponse, OrderRequestError, readOrderInput, privateHeaders } from "@/lib/order-http";
 import { updateDraftSchema } from "@/lib/validation/order";
 import { entityIdSchema } from "@/lib/validation/common";
@@ -10,7 +10,7 @@ export async function GET(_request:Request,{params}:Context) {
     const {tenantId,orderId}=await params;
     const access=await requireTenantAccess(tenantId);
     if(!entityIdSchema.safeParse(orderId).success) throw new OrderRequestError(400,"Invalid order identifier.");
-    return Response.json({order:await getDraft(access,orderId)},{headers:privateHeaders});
+    return Response.json({order:await getOrder(access,orderId)},{headers:privateHeaders});
   } catch(error) {return orderErrorResponse(error);}
 }
 export async function PUT(request:Request,{params}:Context) {

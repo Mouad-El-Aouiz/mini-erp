@@ -13,13 +13,15 @@ export type AdjustmentInput = z.infer<typeof adjustmentSchema>;
 export const quantityChangeSchema = z.string().trim().regex(/^-?(0|[1-9][0-9]{0,9})$/, "Enter a nonzero whole number, such as 10 or -2.")
   .transform(Number).refine((n) => n !== 0 && Math.abs(n) <= MAX_PHYSICAL_QUANTITY, "Enter a nonzero quantity between -2147483647 and 2147483647.");
 
-export function nextPhysicalQuantity(current: number, delta: number): number {
+export function nextPhysicalQuantity(current: number, delta: number, reserved = 0): number {
   if (!Number.isInteger(current) || current < 0 || current > MAX_PHYSICAL_QUANTITY ||
       !Number.isInteger(delta) || delta === 0 || Math.abs(delta) > MAX_PHYSICAL_QUANTITY) {
     throw new RangeError("Invalid stock quantities.");
   }
+  if (!Number.isInteger(reserved) || reserved < 0 || reserved > current) throw new RangeError("Invalid reserved quantity.");
   const next = current + delta;
   if (next < 0) throw new RangeError("Adjustment would make physical stock negative.");
   if (next > MAX_PHYSICAL_QUANTITY) throw new RangeError("Adjustment exceeds the supported stock limit.");
+  if (next < reserved) throw new RangeError("Adjustment would reduce physical stock below reserved quantities.");
   return next;
 }
