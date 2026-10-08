@@ -17,7 +17,7 @@ A new confirmation and an exact replay both return 200:
 { "order": { "id": "uuid", "status": "CONFIRMED", "version": 3, "replayed": false } }
 ```
 
-The existing order detail GET supports DRAFT, CONFIRMED and DELIVERED. DRAFT totals remain current
+The existing order detail GET supports DRAFT, CONFIRMED, DELIVERED and CANCELLED. DRAFT totals remain current
 previews; CONFIRMED totals/customer company name use the saved snapshots. Catalog
 comparison fields are informational after confirmation and never rewrite snapshots.
 The order list exposes the actual status and captured confirmed customer name.
@@ -70,7 +70,7 @@ from the two balance fields; it is not an independently stored counter.
 - SQL checks require 0 <= reserved_quantity <= physical_quantity.
 - Reservation quantities are 1–1000000; primary key is tenant/order/product.
 - Composite foreign keys enforce the exact tenant/order/product/line and actor.
-- DRAFT snapshots must all be NULL; CONFIRMED/DELIVERED snapshots must be complete, bounded,
+- DRAFT snapshots must all be NULL; CONFIRMED/DELIVERED/CANCELLED snapshots must be complete, bounded,
   and consistent with the exact subtotal-level rounding formula.
 - Accepted total uses BIGINT because it can reach 4294967294 cents; API conversion
   remains an exact safe integer JSON number.
@@ -88,5 +88,6 @@ stock or nonmatching replay; 415 wrong media type; 422 invalid payload. Other
 methods return 405. Unexpected database failures follow the framework's 500 path.
 
 Complete delivery consumes reservations; see [Delivery API](09-order-delivery-api.md).
-Cancellation, reservation release, final numbering, draft abandonment and fiscal
-invoicing are deferred. Reservations remain as ACTIVE or CONSUMED historical records.
+Administrator cancellation releases reservations; see [Cancellation API](10-order-cancellation-api.md).
+Final numbering, draft abandonment and fiscal invoicing are deferred. Reservations
+remain as ACTIVE, CONSUMED or RELEASED historical records.

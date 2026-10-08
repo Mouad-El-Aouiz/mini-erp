@@ -53,7 +53,15 @@ export async function getOrder(access: TenantAccess, orderId: string) {
       const user=await tx.user.findUniqueOrThrow({where:{id:actor.userId},select:{name:true}});
       delivery={...record,deliveredByName:user.name};
     }
-    return {...orderRecord({...row,customer,tenant,items}),delivery};
+    let cancellation=null;
+    if(row.status==="CANCELLED") {
+      const record=await tx.cancellation.findUniqueOrThrow({where:{tenantId_orderId:{tenantId:access.tenantId,orderId}},
+        select:{id:true,orderId:true,cancelledAt:true,cancelledByMembershipId:true,reason:true}});
+      const actor=await tx.membership.findUniqueOrThrow({where:{tenantId_id:{tenantId:access.tenantId,id:record.cancelledByMembershipId}},select:{userId:true}});
+      const user=await tx.user.findUniqueOrThrow({where:{id:actor.userId},select:{name:true}});
+      cancellation={...record,cancelledByName:user.name};
+    }
+    return {...orderRecord({...row,customer,tenant,items}),delivery,cancellation};
   },{isolationLevel:"RepeatableRead"});
 }
 async function customerExists(tx: Prisma.TransactionClient, tenantId:string, customerId:string) {

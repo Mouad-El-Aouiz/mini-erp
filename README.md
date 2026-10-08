@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and draft orders with tax previews and confirmation/reservations and complete delivery are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and orders with tax previews, confirmation/reservations, complete delivery and administrator cancellation are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -292,7 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. The workspace links to customer and product management; order confirmation and reservations are implemented; complete delivery is available; cancellation remains deferred.
+must enforce their own tenant and role checks. The workspace links to customer and product management; order confirmation and reservations are implemented; complete delivery and administrator cancellation are available.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -384,7 +384,7 @@ Physical stock cannot become negative. No movement edit/delete operation exists.
 
 If a response is lost, retry with unchanged values so the form reuses its request
 ID. A successful adjustment is applied only once per request ID. Quantity changes
-and history commit together. Confirmation reserves stock; complete delivery is available; cancellation remains deferred.
+and history commit together. Confirmation reserves stock; complete delivery and administrator cancellation are available.
 
 See [Inventory API](docs/06-inventory-api.md) and [STOCK-001](docs/tickets/STOCK-001.md).
 
@@ -404,7 +404,7 @@ Pages: `/tenants/[tenantId]/orders`, `/orders/new`, `/orders/[orderId]` under th
 same tenant prefix; administrator `/tenants/[tenantId]/tax-settings`.
 
 Customer/product selectors are paginated. Draft creation safely retries unchanged
-customer input after a lost response. Cancellation and draft deletion remain deferred.
+customer input after a lost response. Administrator cancellation is available before delivery. Draft deletion remains deferred.
 
 See [Draft orders API](docs/07-draft-orders-api.md) and [ORDER-001](docs/tickets/ORDER-001.md).
 
@@ -421,7 +421,7 @@ changes reserved quantities only; manual corrections cannot reduce physical
 stock below reservations. Repeating the same confirmation by its original actor
 with the original versions returns the existing result without another reservation.
 
-Complete delivery consumes reservations; cancellation remains deferred.
+Complete delivery consumes reservations; administrator cancellation releases reservations.
 Final numbering and production reconciliation remain deferred.
 
 See [Order confirmation API](docs/08-order-confirmation-api.md) and [ORDER-002](docs/tickets/ORDER-002.md).
@@ -440,5 +440,26 @@ movements to their order. Exact retries by the original actor/version return the
 recorded result without another withdrawal. After an uncertain network response,
 reload the order before retrying.
 
-Partial delivery, cancellation, shipping integrations and final document numbering
+Partial delivery, shipping integrations and final document numbering
 remain deferred. See [Delivery API](docs/09-order-delivery-api.md) and [ORDER-003](docs/tickets/ORDER-003.md).
+
+## Confirmed Order Cancellation
+
+An active tenant administrator can cancel a confirmed order before delivery.
+Open the order, enter a cancellation reason (1-500 characters after trimming),
+and use **Cancel confirmed order**. Employees can read the resulting record.
+
+The server checks the expected version and matching active reservations, records
+one cancellation event with actor/reason/date, marks reservations RELEASED and
+decreases only reserved balances in a single transaction. Physical stock and its
+movement history remain unchanged; accepted prices, tax and totals are preserved.
+Cancelled orders cannot be reopened, edited or delivered.
+
+Exact retries by the original administrator/version/normalized reason return the
+existing result without releasing stock twice. Current administrator rights are
+required even for replay. After an uncertain response, use **Reload before
+cancellation** to inspect the current order before retrying.
+
+Cancellation and delivery lock the same order and sorted product rows; only one
+terminal outcome can commit. Draft deletion, returns and reopening remain deferred.
+See [Cancellation API](docs/10-order-cancellation-api.md) and [ORDER-004](docs/tickets/ORDER-004.md).
