@@ -25,7 +25,7 @@ A new success or exact replay returns 200 with private, no-store headers:
 
 The existing order GET adds delivery=null for other states. DELIVERED detail includes
 the event and current recorded actor name; its stable membership ID is retained.
-Both CONFIRMED and DELIVERED detail use accepted customer/money snapshots, unaffected
+CONFIRMED, DELIVERED and CANCELLED detail use accepted customer/money snapshots, unaffected
 by later catalog, tax or customer changes. Delivered orders have no edit/delivery
 control. The list shows Delivered and movement history links back to the order.
 
@@ -70,7 +70,8 @@ PostgreSQL's NULL-distinct uniqueness permits repeated manual adjustments.
 
 SQL checks require negative delivery deltas from -1000000 to -1 with an order;
 manual adjustments must have no order. Reservation status/date must be ACTIVE/NULL
-or CONSUMED/non-NULL. Existing stock bounds and accepted monetary checks remain.
+or CONSUMED/non-NULL; cancellation adds RELEASED with releasedAt instead.
+Only the matching closure timestamp may be present. Existing stock bounds and accepted monetary checks remain.
 
 Cross-record status/quantity equality and balance/history aggregate reconciliation
 are application transaction guarantees and test checks, not SQL aggregate constraints.
@@ -85,6 +86,9 @@ reconciliation/alerts remain future work.
 reservations/balances; 415 wrong media type; 422 invalid payload. Unsupported methods
 return 405. Unexpected database failures use the framework's 500 path.
 
-Cancellation/release, partial deliveries, returns, shipping integrations, delivery
-notes, final numbering and production deployment are deferred. No user-supplied
+Administrator cancellation/release is implemented for CONFIRMED orders; see
+[Cancellation API](10-order-cancellation-api.md). Competing cancellation and delivery
+lock the same order and products, so only one terminal transition can commit.
+Partial deliveries, returns, shipping integrations, delivery notes, final numbering
+and production deployment are deferred. No user-supplied
 partial quantities or financial recalculation are accepted.

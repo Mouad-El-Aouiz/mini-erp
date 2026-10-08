@@ -6,7 +6,8 @@ One physical stock balance per product and tenant, at a single stock location.
 All active members can consult stock and movement history. Only administrators
 can record manual adjustments. Confirmation reserves stock; available stock equals
 physical minus reserved. Complete delivery consumes reservations and records negative physical movements.
-Cancellation remains deferred.
+Administrator cancellation releases reservations without changing physical stock
+or appending physical movements; see [Cancellation API](10-order-cancellation-api.md).
 
 Catalog-created products receive a zero balance in the same transaction. The
 migration initializes existing products at zero; it never invents starting

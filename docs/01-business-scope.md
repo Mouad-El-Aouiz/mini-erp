@@ -40,12 +40,12 @@ Allowed transitions:
 
 - Draft → Confirmed
 - Confirmed → Delivered
-- Confirmed → Cancelled (deferred)
+- Confirmed → Cancelled
 
 Delivered and cancelled orders are terminal states for the MVP.
 
 Approved policy: confirmation reserves stock.
-Confirmation and complete delivery are implemented; cancellation remains deferred.
+Confirmation, complete delivery and administrator cancellation are implemented.
 
 Under this policy:
 
@@ -64,6 +64,8 @@ apply the same stock operation twice.
 Delivery retains reservation records with CONSUMED status and a consumption timestamp.
 It records one same-tenant delivery event and one negative movement per product.
 Prices and monetary snapshots remain unchanged; partial quantities are not accepted.
+Cancellation retains RELEASED reservations and a timestamp, plus one cancellation
+event with administrator and required reason. It creates no physical movement.
 
 Each transition must update the order and its stock records
 atomically: either all changes succeed or none are retained.

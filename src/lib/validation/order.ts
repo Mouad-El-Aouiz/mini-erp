@@ -24,3 +24,8 @@ export type ConfirmOrderInput = z.infer<typeof confirmOrderSchema>;
 
 export const deliverOrderSchema = z.strictObject({ version: versionSchema });
 export type DeliverOrderInput = z.infer<typeof deliverOrderSchema>;
+
+export const cancellationReasonSchema = z.string().trim().min(1, "Enter a cancellation reason.").max(500)
+  .refine(value => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value), "Remove unsupported control characters.");
+export const cancelOrderSchema = z.strictObject({ version: versionSchema, reason: cancellationReasonSchema });
+export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;

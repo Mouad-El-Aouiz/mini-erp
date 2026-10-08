@@ -107,10 +107,11 @@ model Membership {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  deliveriesRecorded Delivery[]
-  ordersConfirmed    Order[]         @relation("ConfirmedBy")
-  ordersCreated      Order[]
-  stockMovements     StockMovement[]
+  cancellationsRecorded Cancellation[]
+  deliveriesRecorded    Delivery[]
+  ordersConfirmed       Order[]         @relation("ConfirmedBy")
+  ordersCreated         Order[]
+  stockMovements        StockMovement[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, userId])
@@ -213,6 +214,7 @@ enum OrderStatus {
   DRAFT
   CONFIRMED
   DELIVERED
+  CANCELLED
 }
 
 model Order {
@@ -239,11 +241,12 @@ model Order {
   confirmedBy             Membership?        @relation("ConfirmedBy", fields: [tenantId, confirmedByMembershipId], references: [tenantId, id], onDelete: Restrict)
   reservations            StockReservation[]
 
-  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  customer  Customer    @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
-  createdBy Membership  @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
-  items     OrderItem[]
-  delivery  Delivery?
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer     Customer      @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  createdBy    Membership    @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  items        OrderItem[]
+  cancellation Cancellation?
+  delivery     Delivery?
 
   @@unique([tenantId, id])
   @@unique([tenantId, requestId])
@@ -278,6 +281,7 @@ model OrderItem {
 enum ReservationStatus {
   ACTIVE
   CONSUMED
+  RELEASED
 }
 
 model StockReservation {
@@ -286,6 +290,7 @@ model StockReservation {
   productId  String            @map("product_id") @db.Uuid
   status     ReservationStatus @default(ACTIVE)
   consumedAt DateTime?         @map("consumed_at") @db.Timestamptz(3)
+  releasedAt DateTime?         @map("released_at") @db.Timestamptz(3)
   quantity   Int
   createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
@@ -313,4 +318,21 @@ model Delivery {
   @@unique([tenantId, orderId])
   @@index([tenantId, deliveredByMembershipId])
   @@map("deliveries")
+}
+
+model Cancellation {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                String   @map("tenant_id") @db.Uuid
+  orderId                 String   @map("order_id") @db.Uuid
+  cancelledByMembershipId String   @map("cancelled_by_membership_id") @db.Uuid
+  cancelledAt             DateTime @default(now()) @map("cancelled_at") @db.Timestamptz(3)
+  /// Non-blank cancellation reason, at most 500 characters; constrained in SQL.
+  reason                  String
+
+  order       Order      @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  cancelledBy Membership @relation(fields: [tenantId, cancelledByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, cancelledByMembershipId])
+  @@map("cancellations")
 }
