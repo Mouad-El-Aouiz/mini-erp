@@ -296,3 +296,31 @@ must enforce their own tenant and role checks. No business modules are included
 in this workspace shell.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
+
+## Local Demo Company
+
+After provisioning your existing local account, create a demo workspace:
+
+```bash
+npm run db:create-dev-user
+npm run db:create-dev-company
+```
+
+The company script requires a local PostgreSQL database named `mini_erp`, refuses
+`NODE_ENV=production`, and identifies the existing credential user using
+`DEV_USER_EMAIL`. It does not create users or change passwords.
+
+Optional `.env` settings `DEV_TENANT_ID` and `DEV_TENANT_NAME` select the company
+UUID and name. Their defaults are shown in `.env.example`. Keep the UUID stable
+between runs; changing it deliberately creates a separate company.
+
+The initial run creates the company and its ADMIN membership in one transaction.
+Repeated runs leave existing names, roles and active status unchanged. An
+existing company without this user's membership is rejected rather than granting
+access. This script does not reactivate a revoked membership or promote an
+existing employee. Concurrent conflicting setup runs may fail; rerun after the
+first completes.
+
+Sign in and open `/dashboard` to select the demo company. Business modules are
+not implemented yet. This is a local setup utility, not production onboarding.
+See [SETUP-002](docs/tickets/SETUP-002.md).
