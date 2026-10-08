@@ -31,7 +31,8 @@ export default async function StockHistoryPage({ params, searchParams }: {
     <section aria-labelledby="movements-title"><h2 id="movements-title">Movements</h2>
       {result.movements.length === 0 ? <p>No stock movements on this page.</p> :
         <ul className={styles.list} aria-label="Stock movements">{result.movements.map((movement) => <li key={movement.id} className={styles.card}>
-          <h3>Adjustment: {movement.quantityDelta > 0 ? "+" : ""}{movement.quantityDelta}</h3>
+          <h3>{movement.kind==="DELIVERY"?"Delivery":"Adjustment"}: {movement.quantityDelta > 0 ? "+" : ""}{movement.quantityDelta}</h3>
+          {movement.orderId&&<p><Link href={`/tenants/${access.tenantId}/orders/${movement.orderId}`} prefetch={false}>View delivered order</Link></p>}
           <p>Reason: {movement.reason}</p><p>Recorded by: {movement.recordedByName}</p>
           <p><time dateTime={movement.createdAt.toISOString()}>{movement.createdAt.toISOString().replace("T", " ").replace("Z", " UTC")}</time></p>
         </li>)}</ul>}

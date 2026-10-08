@@ -22,7 +22,7 @@ export function DraftEditor({tenantId,initial}:{tenantId:string;initial:DraftVie
   async function reload() {
     const response=await fetch(api,{credentials:"same-origin",cache:"no-store"});const body=await response.json();
     if(!response.ok)throw new Error(body.error??"Unable to reload draft.");
-    const order=body.order as DraftView;if(order.status==="CONFIRMED"){router.refresh();return;}setDraft(order);setLines(linesFor(order));setCustomer({id:order.customerId,label:order.customer.companyName});setProduct(null);router.refresh();
+    const order=body.order as DraftView;if(order.status!=="DRAFT"){router.refresh();return;}setDraft(order);setLines(linesFor(order));setCustomer({id:order.customerId,label:order.customer.companyName});setProduct(null);router.refresh();
   }
   async function perform(url:string,method:string,input:unknown,message:string) {
     if(pending)return;setPending(true);setError("");setNotice("");

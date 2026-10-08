@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and draft orders with tax previews and confirmation/reservations are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and draft orders with tax previews and confirmation/reservations and complete delivery are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -292,7 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. The workspace links to customer and product management; order confirmation and reservations are implemented; fulfillment remains deferred.
+must enforce their own tenant and role checks. The workspace links to customer and product management; order confirmation and reservations are implemented; complete delivery is available; cancellation remains deferred.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -384,7 +384,7 @@ Physical stock cannot become negative. No movement edit/delete operation exists.
 
 If a response is lost, retry with unchanged values so the form reuses its request
 ID. A successful adjustment is applied only once per request ID. Quantity changes
-and history commit together. Confirmation reserves stock; fulfillment remains deferred.
+and history commit together. Confirmation reserves stock; complete delivery is available; cancellation remains deferred.
 
 See [Inventory API](docs/06-inventory-api.md) and [STOCK-001](docs/tickets/STOCK-001.md).
 
@@ -404,8 +404,7 @@ Pages: `/tenants/[tenantId]/orders`, `/orders/new`, `/orders/[orderId]` under th
 same tenant prefix; administrator `/tenants/[tenantId]/tax-settings`.
 
 Customer/product selectors are paginated. Draft creation safely retries unchanged
-customer input after a lost response. Delivery, cancellation and draft deletion
-remain deferred.
+customer input after a lost response. Cancellation and draft deletion remain deferred.
 
 See [Draft orders API](docs/07-draft-orders-api.md) and [ORDER-001](docs/tickets/ORDER-001.md).
 
@@ -422,8 +421,24 @@ changes reserved quantities only; manual corrections cannot reduce physical
 stock below reservations. Repeating the same confirmation by its original actor
 with the original versions returns the existing result without another reservation.
 
-No delivery/cancellation operation is exposed yet. Reservations remain outstanding
-until the fulfillment module is implemented. Final numbering and production
-reconciliation remain deferred.
+Complete delivery consumes reservations; cancellation remains deferred.
+Final numbering and production reconciliation remain deferred.
 
 See [Order confirmation API](docs/08-order-confirmation-api.md) and [ORDER-002](docs/tickets/ORDER-002.md).
+
+## Complete Order Delivery
+
+Open a confirmed order and use **Record complete delivery** only after all ordered
+units have been handed over. Both active roles can record delivery. The server
+requires the reviewed order version and matching active reservations, then creates
+one delivery event, decreases physical/reserved quantities, retains consumed
+reservations and appends one negative movement per product in a transaction.
+Accepted prices, tax and totals are preserved. Delivered orders are terminal.
+
+The inventory history distinguishes adjustments from deliveries and links delivery
+movements to their order. Exact retries by the original actor/version return the
+recorded result without another withdrawal. After an uncertain network response,
+reload the order before retrying.
+
+Partial delivery, cancellation, shipping integrations and final document numbering
+remain deferred. See [Delivery API](docs/09-order-delivery-api.md) and [ORDER-003](docs/tickets/ORDER-003.md).
