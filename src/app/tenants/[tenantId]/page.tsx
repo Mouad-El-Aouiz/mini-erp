@@ -38,7 +38,8 @@ export default async function TenantWorkspacePage({
       </header>
       <section className={styles.empty} aria-labelledby="workspace-title">
         <h2 id="workspace-title">Company workspace</h2>
-        <p>Business modules will be available here as they are implemented.</p>
+        <p>Manage the business customers of this company.</p>
+        <Link href={`/tenants/${tenant.id}/customers`} prefetch={false}>Manage customers</Link>
       </section>
     </main>
   );

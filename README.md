@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Membership management and business modules are not implemented yet.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -292,8 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. No business modules are included
-in this workspace shell.
+must enforce their own tenant and role checks. The workspace links to customer management; products, orders and inventory remain deferred.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -321,6 +320,36 @@ access. This script does not reactivate a revoked membership or promote an
 existing employee. Concurrent conflicting setup runs may fail; rerun after the
 first completes.
 
-Sign in and open `/dashboard` to select the demo company. Business modules are
-not implemented yet. This is a local setup utility, not production onboarding.
+Sign in and open `/dashboard` to select the demo company and manage its customers. This is a local setup utility, not production onboarding.
 See [SETUP-002](docs/tickets/SETUP-002.md).
+
+## Business Customers
+
+Open your company workspace and select **Manage customers**. Active employees
+and administrators can create and edit customers for their own company.
+Customer names need not be unique. Optional fields may be cleared. Deletion
+and archival are not available.
+
+Pages:
+
+- `/tenants/[tenantId]/customers`: list, 20 records per page.
+- `/tenants/[tenantId]/customers/new`: creation form.
+- `/tenants/[tenantId]/customers/[customerId]/edit`: full edit form.
+
+Use the same browser origin as BETTER_AUTH_URL when saving; local development
+normally uses `http://localhost:3000`. The application refuses foreign or missing
+Origin headers on customer writes. This policy supplements session and
+membership checks.
+
+Run the unit tests independently of PostgreSQL:
+
+```bash
+npm run test:unit
+```
+
+The existing browser-test setup also runs customer API, form, isolation and SQL
+constraint checks on the isolated test database. CI now runs unit tests before
+the production build and application integration/browser checks.
+
+See [Customers API](docs/04-customers-api.md) and
+[CUSTOMER-001](docs/tickets/CUSTOMER-001.md) for contracts and decisions.
