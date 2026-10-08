@@ -7,8 +7,9 @@ their tenant. Only ADMIN members can update the tenant tax rate. Every endpoint
 checks session and active membership; writes require Origin matching
 BETTER_AUTH_URL. All responses use Cache-Control: private, no-store.
 
-Only DRAFT exists in the current database status enum. Confirmation,
-reservations, delivery, cancellation and draft deletion are not exposed. A draft
+DRAFT and CONFIRMED are supported. Confirmation/reservations have a separate
+[contract](08-order-confirmation-api.md). Delivery, cancellation and draft deletion
+are not exposed. A draft
 can be empty and can contain quantities exceeding current stock: drafts never
 reserve or consume stock.
 
@@ -18,7 +19,7 @@ reserve or consume stock.
 | --- | --- | --- |
 | GET | /api/tenants/{tenantId}/orders?page=1 | orders, page, pageSize, hasNextPage |
 | POST | /api/tenants/{tenantId}/orders | order: id, replayed |
-| GET | /api/tenants/{tenantId}/orders/{orderId} | complete draft and current preview |
+| GET | /api/tenants/{tenantId}/orders/{orderId} | order detail: current draft preview or accepted confirmed snapshots |
 | PUT | /api/tenants/{tenantId}/orders/{orderId} | order: id, new version |
 | POST | /api/tenants/{tenantId}/orders/{orderId}/refresh-prices | order: id, new version |
 | GET | /api/tenants/{tenantId}/tax-settings | taxRateBps, version |
@@ -92,7 +93,7 @@ current catalog price. Old versions, missing/extra acknowledgments and catalog
 changes since review return 409 without partial updates. Prices are locked during
 acceptance. This endpoint updates captured prices only, retaining name/SKU
 snapshots and increasing version. Save unsaved edits before refreshing prices.
-Future order confirmation must recheck prices again.
+Order confirmation rechecks prices again inside its transaction.
 
 ## Tax and exact totals
 
@@ -116,8 +117,7 @@ total = subtotal + tax
 
 All serialized monetary values are exact safe integer JSON numbers. At the maximum
 supported subtotal and 100% tax, total is 4294967294 cents. Draft previews are
-derived rather than stored as final financial records. Future confirmation must
-freeze accepted prices, tax rate and totals. The demonstration rate establishes
+derived rather than stored as final financial records. Confirmation freezes accepted prices, tax rate and totals. The demonstration rate establishes
 no tax jurisdiction or fiscal compliance.
 
 ## Errors and limits
@@ -133,5 +133,6 @@ ownership. Checks protect quantities, captured prices, tax bounds and versions.
 Referenced customers/products/memberships use RESTRICT. The 100-line aggregate
 limit and monetary subtotal limit are application rules, not SQL aggregate checks.
 
-Search, draft deletion/abandonment, final order numbering, order transitions,
-reservation policies, fiscal invoicing, exports and deployment remain deferred.
+Confirmation and reservations are implemented; see [Order confirmation](08-order-confirmation-api.md).
+Search, draft deletion/abandonment, final order numbering, delivery/cancellation,
+fiscal invoicing, exports and deployment remain deferred.

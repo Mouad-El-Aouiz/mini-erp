@@ -107,8 +107,9 @@ model Membership {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  ordersCreated  Order[]
-  stockMovements StockMovement[]
+  ordersConfirmed Order[]         @relation("ConfirmedBy")
+  ordersCreated   Order[]
+  stockMovements  StockMovement[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, userId])
@@ -151,6 +152,7 @@ model Product {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  reservations     StockReservation[]
   orderItems       OrderItem[]
   inventoryBalance InventoryBalance?
   stockMovements   StockMovement[]
@@ -166,6 +168,8 @@ model InventoryBalance {
   productId        String   @map("product_id") @db.Uuid
   /// Nonnegative physical units; enforced by inventory_physical_non_negative in SQL.
   physicalQuantity Int      @default(0) @map("physical_quantity")
+  /// Between zero and physicalQuantity; updated atomically with reservations.
+  reservedQuantity Int      @default(0) @map("reserved_quantity")
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Cascade)
@@ -196,6 +200,7 @@ model StockMovement {
 
 enum OrderStatus {
   DRAFT
+  CONFIRMED
 }
 
 model Order {
@@ -210,6 +215,18 @@ model Order {
   createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  confirmedAt             DateTime?          @map("confirmed_at") @db.Timestamptz(3)
+  confirmedByMembershipId String?            @map("confirmed_by_membership_id") @db.Uuid
+  confirmedTaxVersion     Int?               @map("confirmed_tax_version")
+  acceptedTaxRateBps      Int?               @map("accepted_tax_rate_bps")
+  subtotalCents           Int?               @map("subtotal_cents")
+  taxCents                Int?               @map("tax_cents")
+  /// Up to 4294967294 cents; serialized as a safe JSON number.
+  totalCents              BigInt?            @map("total_cents")
+  customerCompanyName     String?            @map("customer_company_name")
+  confirmedBy             Membership?        @relation("ConfirmedBy", fields: [tenantId, confirmedByMembershipId], references: [tenantId, id], onDelete: Restrict)
+  reservations            StockReservation[]
+
   tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer  Customer    @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
   createdBy Membership  @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
@@ -220,6 +237,7 @@ model Order {
   @@index([tenantId, updatedAt, id])
   @@index([tenantId, customerId])
   @@index([tenantId, createdByMembershipId])
+  @@index([tenantId, confirmedByMembershipId])
   @@map("orders")
 }
 
@@ -233,10 +251,29 @@ model OrderItem {
   productName    String @map("product_name")
   productSku     String @map("product_sku")
 
+  reservation StockReservation?
+
   order   Order   @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
   product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
 
   @@unique([tenantId, orderId, productId])
   @@index([tenantId, productId])
   @@map("order_items")
+}
+
+model StockReservation {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  quantity  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  order   Order   @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+
+  orderItem OrderItem @relation(fields: [tenantId, orderId, productId], references: [tenantId, orderId, productId], onDelete: Restrict)
+
+  @@id([tenantId, orderId, productId])
+  @@index([tenantId, productId])
+  @@map("stock_reservations")
 }

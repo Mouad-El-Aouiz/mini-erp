@@ -4,7 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { lockActiveMembership, type TenantAccess } from "@/lib/membership-lock";
 import { calculateDraftTotals } from "@/lib/order-money";
-import type { CreateDraftInput, UpdateDraftInput, RefreshPricesInput, TaxSettingsInput } from "@/lib/validation/order";
+import type { CreateDraftInput, UpdateDraftInput, RefreshPricesInput, TaxSettingsInput, ConfirmOrderInput } from "@/lib/validation/order";
 export class OrderNotFoundError extends Error { constructor() { super("Order not found."); } }
 export class OrderConflictError extends Error {}
 export class OrderReferenceError extends Error {}
@@ -13,25 +13,31 @@ const scope = (access: TenantAccess) => ({ tenantId: access.tenantId,
 const itemSelect = { id:true, productId:true, quantity:true, unitPriceCents:true, productName:true, productSku:true,
   product:{select:{unitPriceCents:true}} } as const;
 const orderSelect = { id:true, customerId:true, status:true, version:true, createdAt:true, updatedAt:true,
-  createdByMembershipId:true } as const;
-type DraftRow=Prisma.OrderGetPayload<{select:typeof orderSelect}>&{
+  createdByMembershipId:true, confirmedAt:true, confirmedByMembershipId:true,
+  confirmedTaxVersion:true, acceptedTaxRateBps:true, subtotalCents:true, taxCents:true,
+  totalCents:true, customerCompanyName:true } as const;
+type OrderRow=Prisma.OrderGetPayload<{select:typeof orderSelect}>&{
   customer:{id:string;companyName:string};tenant:{taxRateBps:number;taxVersion:number};
   items:Prisma.OrderItemGetPayload<{select:typeof itemSelect}>[];
 };
-function draftRecord(row: DraftRow) {
-  const { tenant, items, ...order } = row;
-  return { ...order, items:items.map(({product, ...item}) => ({...item,
+function orderRecord(row: OrderRow) {
+  const { tenant, items, totalCents, ...order } = row;
+  const confirmed=row.status==="CONFIRMED";
+  const totals=confirmed?{subtotalCents:row.subtotalCents!,taxCents:row.taxCents!,
+    totalCents:Number(totalCents!),taxRateBps:row.acceptedTaxRateBps!}:calculateDraftTotals(items,tenant.taxRateBps);
+  return { ...order, totalCents:totalCents===null?null:Number(totalCents),
+    customer:confirmed?{...order.customer,companyName:row.customerCompanyName!}:order.customer, items:items.map(({product, ...item}) => ({...item,
     currentUnitPriceCents:product.unitPriceCents, priceChanged:item.unitPriceCents !== product.unitPriceCents,
     lineTotalCents:item.quantity * item.unitPriceCents })),
-    totals:calculateDraftTotals(items, tenant.taxRateBps), taxVersion:tenant.taxVersion };
+    totals, taxVersion:confirmed?row.confirmedTaxVersion!:tenant.taxVersion };
 }
-export type DraftRecord = ReturnType<typeof draftRecord>;
+export type OrderRecord = ReturnType<typeof orderRecord>;
 export async function listOrders(access: TenantAccess, page: number) {
   const rows = await prisma.order.findMany({where:scope(access), select:{id:true,status:true,version:true,updatedAt:true,
-    customer:{select:{companyName:true}},_count:{select:{items:true}}}, orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:(page-1)*20,take:21});
-  return {orders:rows.slice(0,20).map(({_count,...row})=>({...row,itemCount:_count.items})),page,pageSize:20,hasNextPage:rows.length>20};
+    customerCompanyName:true, customer:{select:{companyName:true}},_count:{select:{items:true}}}, orderBy:[{updatedAt:"desc"},{id:"desc"}],skip:(page-1)*20,take:21});
+  return {orders:rows.slice(0,20).map(({_count,...row})=>({...row,customer:{companyName:row.customerCompanyName??row.customer.companyName},itemCount:_count.items})),page,pageSize:20,hasNextPage:rows.length>20};
 }
-export async function getDraft(access: TenantAccess, orderId: string) {
+export async function getOrder(access: TenantAccess, orderId: string) {
   return prisma.$transaction(async tx=>{
     const row=await tx.order.findFirst({where:{...scope(access),id:orderId},select:orderSelect});
     if(!row) throw new OrderNotFoundError();
@@ -39,7 +45,7 @@ export async function getDraft(access: TenantAccess, orderId: string) {
     const customer=await tx.customer.findUniqueOrThrow({where:{tenantId_id:{tenantId:access.tenantId,id:row.customerId}},select:{id:true,companyName:true}});
     const tenant=await tx.tenant.findUniqueOrThrow({where:{id:access.tenantId},select:{taxRateBps:true,taxVersion:true}});
     const items=await tx.orderItem.findMany({where:{tenantId:access.tenantId,orderId},select:itemSelect,orderBy:{productId:"asc"}});
-    return draftRecord({...row,customer,tenant,items});
+    return orderRecord({...row,customer,tenant,items});
   },{isolationLevel:"RepeatableRead"});
 }
 async function customerExists(tx: Prisma.TransactionClient, tenantId:string, customerId:string) {
@@ -131,4 +137,58 @@ export async function updateTaxSettings(access:TenantAccess,input:TaxSettingsInp
     const tenant=await tx.tenant.update({where:{id:access.tenantId},data:{taxRateBps:input.taxRateBps,taxVersion:{increment:1}},select:{taxRateBps:true,taxVersion:true}});
     return {taxRateBps:tenant.taxRateBps,version:tenant.taxVersion};
   });
+}
+
+export async function confirmOrder(access:TenantAccess, orderId:string, input:ConfirmOrderInput) {
+  orderId=orderId.toLowerCase();
+  return prisma.$transaction(async tx=>{
+    await lockActiveMembership(tx,access);
+    const orders=await tx.$queryRaw<{status:string;version:number;confirmed_by_membership_id:string|null;confirmed_tax_version:number|null}[]>`
+      SELECT status,version,confirmed_by_membership_id,confirmed_tax_version FROM orders
+      WHERE tenant_id=${access.tenantId}::uuid AND id=${orderId}::uuid FOR UPDATE`;
+    if(orders.length===0) throw new OrderNotFoundError();
+    const order=orders[0];
+    if(order.status==="CONFIRMED") {
+      if(order.version===input.version+1 && order.confirmed_by_membership_id===access.id && order.confirmed_tax_version===input.taxVersion) {
+        return {id:orderId,status:"CONFIRMED" as const,version:order.version,replayed:true};
+      }
+      throw new OrderConflictError("This order is already confirmed. Reload it to view the accepted details.");
+    }
+    if(order.status!=="DRAFT" || order.version!==input.version) throw new OrderConflictError("This draft has changed. Reload it before confirming.");
+    // Lock tax settings before products; retain exactly the rate reviewed by the user.
+    const tenants=await tx.$queryRaw<{tax_rate_bps:number;tax_version:number}[]>`
+      SELECT tax_rate_bps,tax_version FROM tenants WHERE id=${access.tenantId}::uuid FOR SHARE`;
+    const tenant=tenants[0];
+    if(tenant.tax_version!==input.taxVersion) throw new OrderConflictError("Tax settings have changed. Reload and review the totals before confirming.");
+    const items=await tx.orderItem.findMany({where:{tenantId:access.tenantId,orderId},orderBy:{productId:"asc"}});
+    if(items.length===0) throw new OrderConflictError("Add and save at least one product before confirming.");
+    // Every stock writer locks product rows; sorted locks prevent opposite multi-product ordering.
+    const products=await tx.$queryRaw<{id:string;unit_price_cents:number}[]>`
+      SELECT id,unit_price_cents FROM products WHERE tenant_id=${access.tenantId}::uuid
+      AND id IN (${Prisma.join(items.map(item=>Prisma.sql`${item.productId}::uuid`))}) ORDER BY id FOR UPDATE`;
+    const prices=new Map(products.map(product=>[product.id,product.unit_price_cents]));
+    if(items.some(item=>prices.get(item.productId)!==item.unitPriceCents)) {
+      throw new OrderConflictError("Catalog prices have changed. Reload and explicitly accept current prices before confirming.");
+    }
+    const totals=calculateDraftTotals(items,tenant.tax_rate_bps);
+    const saved=await tx.order.findUniqueOrThrow({where:{tenantId_id:{tenantId:access.tenantId,id:orderId}},select:{customerId:true}});
+    const customers=await tx.$queryRaw<{company_name:string}[]>`
+      SELECT company_name FROM customers WHERE tenant_id=${access.tenantId}::uuid AND id=${saved.customerId}::uuid FOR SHARE`;
+    for(const item of items) {
+      const key={tenantId:access.tenantId,productId:item.productId};
+      const balance=await tx.inventoryBalance.upsert({where:{tenantId_productId:key},create:key,update:{}});
+      if(balance.physicalQuantity-balance.reservedQuantity<item.quantity) {
+        throw new OrderConflictError(`Insufficient available stock for ${item.productName}. Reload inventory before confirming.`);
+      }
+      await tx.inventoryBalance.update({where:{tenantId_productId:key},data:{reservedQuantity:{increment:item.quantity}}});
+      await tx.stockReservation.create({data:{...key,orderId,quantity:item.quantity}});
+    }
+    await tx.order.update({where:{tenantId_id:{tenantId:access.tenantId,id:orderId}},data:{
+      status:"CONFIRMED",version:{increment:1},confirmedAt:new Date(),confirmedByMembershipId:access.id,
+      confirmedTaxVersion:tenant.tax_version,acceptedTaxRateBps:totals.taxRateBps,
+      subtotalCents:totals.subtotalCents,taxCents:totals.taxCents,totalCents:BigInt(totals.totalCents),
+      customerCompanyName:customers[0].company_name,
+    }});
+    return {id:orderId,status:"CONFIRMED" as const,version:input.version+1,replayed:false};
+  },{timeout:15_000});
 }

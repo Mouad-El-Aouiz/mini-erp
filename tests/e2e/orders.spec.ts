@@ -158,7 +158,7 @@ test("invalid fields, tampered money and untrusted origins cannot alter drafts",
   expect((await page.request.post(api,{data:{customerId,requestId:randomUUID()}})).status()).toBe(403);
   expect((await page.request.get(`${api}/invalid`)).status()).toBe(400);
   expect((await page.request.delete(`${api}/${id}`,{headers})).status()).toBe(405);
-  expect((await page.request.post(`${api}/${id}/confirm`,{headers,data:{version:1}})).status()).toBe(404);
+  expect((await page.request.post(`${api}/${id}/confirm`,{headers,data:{version:1}})).status()).toBe(422);
   const order=await read(page,id);expect(order.version).toBe(1);expect(order.items).toHaveLength(0);
 });
 

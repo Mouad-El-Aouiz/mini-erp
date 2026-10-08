@@ -15,10 +15,10 @@ export default async function InventoryPage({ params, searchParams }: {
   return <main className={workspace.workspace}>
     <Link href={`/tenants/${access.tenantId}`} prefetch={false}>Back to workspace</Link>
     <div className={styles.toolbar}><div><h1>Inventory</h1><p>Company: {access.tenantName}</p></div></div>
-    <p>Physical stock at your company&apos;s single stock location.</p>
+    <p>Physical, reserved and available stock at your company&apos;s single stock location.</p>
     {result.inventory.length === 0 ? <section className={styles.card}><h2>No products on this page</h2><p>Add products to the catalog to get started.</p><Link href={`/tenants/${access.tenantId}/products`} prefetch={false}>View products</Link></section> :
       <ul className={styles.list} aria-label="Inventory">{result.inventory.map((product) => <li key={product.id} className={styles.card}>
-        <h2>{product.name}</h2><p>SKU: {product.sku}</p><p>Physical quantity: {product.physicalQuantity}</p>
+        <h2>{product.name}</h2><p>SKU: {product.sku}</p><p>Physical quantity: {product.physicalQuantity}</p><p>Reserved quantity: {product.reservedQuantity}</p><p>Available quantity: {product.availableQuantity}</p>
         <Link href={`${base}/${product.id}`} prefetch={false} aria-label={`View stock history for ${product.name}`}>View stock history</Link>
       </li>)}</ul>}
     <nav aria-label="Inventory pages" className={styles.pagination}>

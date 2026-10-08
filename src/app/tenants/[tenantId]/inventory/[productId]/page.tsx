@@ -25,7 +25,7 @@ export default async function StockHistoryPage({ params, searchParams }: {
   return <main className={workspace.workspace}>
     <Link href={`/tenants/${access.tenantId}/inventory`} prefetch={false}>Back to inventory</Link>
     <h1>Stock history</h1><p>Company: {access.tenantName}</p>
-    <section className={styles.card}><h2>{result.product.name}</h2><p>SKU: {result.product.sku}</p><p>Physical quantity: {result.physicalQuantity}</p></section>
+    <section className={styles.card}><h2>{result.product.name}</h2><p>SKU: {result.product.sku}</p><p>Physical quantity: {result.physicalQuantity}</p><p>Reserved quantity: {result.reservedQuantity}</p><p>Available quantity: {result.availableQuantity}</p></section>
     {query.saved === "1" && <p role="status" className={styles.notice}>Stock adjustment recorded.</p>}
     {access.role === "ADMIN" && <section><h2>Adjust stock</h2><AdjustmentForm tenantId={access.tenantId} productId={result.product.id} /></section>}
     <section aria-labelledby="movements-title"><h2 id="movements-title">Movements</h2>

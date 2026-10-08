@@ -34,7 +34,7 @@ hardware exclusively to business customers.
 - Stock reservations and stock movements.
 - One stock location per tenant.
 
-## Proposed Order Workflow
+## Order Workflow
 
 Allowed transitions:
 
@@ -44,10 +44,10 @@ Allowed transitions:
 
 Delivered and cancelled orders are terminal states for the MVP.
 
-Proposed policy: confirmation reserves stock.
-This policy remains subject to approval.
+Approved policy: confirmation reserves stock.
+Confirmation is implemented; delivery and cancellation remain deferred.
 
-Under this proposed policy:
+Under this policy:
 
 - Draft orders do not affect stock or reservations.
 - Confirmation reserves quantities without decreasing physical stock.
@@ -115,7 +115,9 @@ If a difference exists:
 - Recheck prices when confirmation is attempted again.
 
 After confirmation, preserve the accepted unit prices,
-tax rate and monetary totals.
+tax rate and monetary totals. Also retain the customer company name, confirmation
+timestamp and confirming membership. Confirmed orders are read-only through the application.
+A changed tax settings version requires reloading and reviewing the preview before confirmation.
 
 Negotiated prices and manual price overrides are outside
 the initial scope.
@@ -161,8 +163,7 @@ or fiscal compliance.
 
 ## Open Questions
 
-- Confirm the proposed stock reservation policy.
-- Define confirmed-order snapshots and final numbering.
+- Define final order numbering and fulfillment records.
 - Define draft deletion or abandonment.
 - Define customer duplicate handling, deletion and archival.
 

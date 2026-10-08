@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and draft orders with tax previews are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and draft orders with tax previews and confirmation/reservations are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -292,7 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. The workspace links to customer and product management; confirmation, fulfillment and reservations remain deferred.
+must enforce their own tenant and role checks. The workspace links to customer and product management; order confirmation and reservations are implemented; fulfillment remains deferred.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -369,7 +369,7 @@ Pages:
 - `/tenants/[tenantId]/products/[productId]/edit`: administrator edit form.
 
 Product writes use the same session, tenant and Origin policy as customers and
-add the ADMIN role requirement. Physical stock is available through inventory management. Draft tax previews are implemented; order confirmation and deletion are deferred.
+add the ADMIN role requirement. Physical stock is available through inventory management. Draft tax previews are implemented; order confirmation is available and deletion is deferred.
 See [Products API](docs/05-products-api.md) and [PRODUCT-001](docs/tickets/PRODUCT-001.md).
 
 ## Physical Inventory
@@ -384,7 +384,7 @@ Physical stock cannot become negative. No movement edit/delete operation exists.
 
 If a response is lost, retry with unchanged values so the form reuses its request
 ID. A successful adjustment is applied only once per request ID. Quantity changes
-and history commit together. Reservations and fulfillment remain deferred.
+and history commit together. Confirmation reserves stock; fulfillment remains deferred.
 
 See [Inventory API](docs/06-inventory-api.md) and [STOCK-001](docs/tickets/STOCK-001.md).
 
@@ -404,7 +404,26 @@ Pages: `/tenants/[tenantId]/orders`, `/orders/new`, `/orders/[orderId]` under th
 same tenant prefix; administrator `/tenants/[tenantId]/tax-settings`.
 
 Customer/product selectors are paginated. Draft creation safely retries unchanged
-customer input after a lost response. Order confirmation, stock reservations,
-delivery, cancellation and draft deletion remain deferred.
+customer input after a lost response. Delivery, cancellation and draft deletion
+remain deferred.
 
 See [Draft orders API](docs/07-draft-orders-api.md) and [ORDER-001](docs/tickets/ORDER-001.md).
+
+## Order Confirmation and Reservations
+
+Save the draft, review current prices/totals, then use **Confirm order**. Both active
+roles can confirm. The server requires unchanged draft/tax versions, current
+catalog prices, at least one line and sufficient available stock for every product.
+Confirmation records accepted monetary snapshots, customer company name, timestamp
+and actor; confirmed orders are read-only through the application.
+
+Inventory now shows physical, reserved and available quantities. Confirmation
+changes reserved quantities only; manual corrections cannot reduce physical
+stock below reservations. Repeating the same confirmation by its original actor
+with the original versions returns the existing result without another reservation.
+
+No delivery/cancellation operation is exposed yet. Reservations remain outstanding
+until the fulfillment module is implemented. Final numbering and production
+reconciliation remain deferred.
+
+See [Order confirmation API](docs/08-order-confirmation-api.md) and [ORDER-002](docs/tickets/ORDER-002.md).

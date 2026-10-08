@@ -21,10 +21,11 @@ const scope = (access: TenantAccess) => ({ tenantId: access.tenantId,
 
 export async function listInventory(access: TenantAccess, page: number) {
   const rows = await prisma.product.findMany({ where: scope(access),
-    select: { id: true, sku: true, name: true, inventoryBalance: { select: { physicalQuantity: true } } },
+    select: { id: true, sku: true, name: true, inventoryBalance: { select: { physicalQuantity: true, reservedQuantity: true } } },
     orderBy: [{ name: "asc" }, { id: "asc" }], skip: (page - 1) * pageSize, take: pageSize + 1 });
   return { inventory: rows.slice(0, pageSize).map(({ inventoryBalance, ...product }) =>
-    ({ ...product, physicalQuantity: inventoryBalance?.physicalQuantity ?? 0 })),
+    ({ ...product, physicalQuantity: inventoryBalance?.physicalQuantity ?? 0, reservedQuantity: inventoryBalance?.reservedQuantity ?? 0,
+      availableQuantity: (inventoryBalance?.physicalQuantity ?? 0)-(inventoryBalance?.reservedQuantity ?? 0) })),
     page, pageSize, hasNextPage: rows.length > pageSize };
 }
 
@@ -36,12 +37,13 @@ export async function getInventoryHistory(access: TenantAccess, productId: strin
     if (!product) throw new ProductNotFoundError();
     const balance = await tx.inventoryBalance.findUnique({ where: {
       tenantId_productId: { tenantId: access.tenantId, productId },
-    }, select: { physicalQuantity: true } });
+    }, select: { physicalQuantity: true, reservedQuantity: true } });
     const rows = await tx.stockMovement.findMany({ where: {
       tenantId: access.tenantId, productId, product: scope(access),
     }, select: movementSelect, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize, take: pageSize + 1 });
-    return { product, physicalQuantity: balance?.physicalQuantity ?? 0,
+    return { product, physicalQuantity: balance?.physicalQuantity ?? 0, reservedQuantity: balance?.reservedQuantity ?? 0,
+      availableQuantity: (balance?.physicalQuantity ?? 0)-(balance?.reservedQuantity ?? 0),
       movements: rows.slice(0, pageSize).map(movementRecord), page, pageSize, hasNextPage: rows.length > pageSize };
   }, { isolationLevel: "RepeatableRead" });
 }
@@ -69,7 +71,7 @@ export async function adjustInventory(access: TenantAccess, productId: string, i
     const balance = await tx.inventoryBalance.upsert({ where: { tenantId_productId: key },
       create: { ...key, physicalQuantity: 0 }, update: {} });
     let quantity: number;
-    try { quantity = nextPhysicalQuantity(balance.physicalQuantity, input.quantityDelta); }
+    try { quantity = nextPhysicalQuantity(balance.physicalQuantity, input.quantityDelta, balance.reservedQuantity); }
     catch (error) {
       if (error instanceof RangeError) throw new InventoryConflictError(error.message);
       throw error;

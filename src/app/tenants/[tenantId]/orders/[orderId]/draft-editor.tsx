@@ -22,7 +22,7 @@ export function DraftEditor({tenantId,initial}:{tenantId:string;initial:DraftVie
   async function reload() {
     const response=await fetch(api,{credentials:"same-origin",cache:"no-store"});const body=await response.json();
     if(!response.ok)throw new Error(body.error??"Unable to reload draft.");
-    const order=body.order as DraftView;setDraft(order);setLines(linesFor(order));setCustomer({id:order.customerId,label:order.customer.companyName});setProduct(null);router.refresh();
+    const order=body.order as DraftView;if(order.status==="CONFIRMED"){router.refresh();return;}setDraft(order);setLines(linesFor(order));setCustomer({id:order.customerId,label:order.customer.companyName});setProduct(null);router.refresh();
   }
   async function perform(url:string,method:string,input:unknown,message:string) {
     if(pending)return;setPending(true);setError("");setNotice("");
@@ -79,6 +79,10 @@ export function DraftEditor({tenantId,initial}:{tenantId:string;initial:DraftVie
     </form>
     <section><h2>Catalog prices</h2><p>Save your edits before accepting current catalog prices. Review the old and current prices above.</p>
       <button type="button" disabled={pending||dirty||!draft.items.some(item=>item.priceChanged)} onClick={()=>void perform(`${api}/refresh-prices`,"POST",{version:draft.version,prices:draft.items.map(item=>({productId:item.productId,unitPriceCents:item.currentUnitPriceCents}))},"Catalog prices accepted.")}>Accept current catalog prices</button>
+    </section>
+    <section className={styles.card}><h2>Confirm order</h2>
+      <p>Save all edits and review prices and totals first. Confirmation reserves stock and locks the accepted order details. Physical stock changes at delivery.</p>
+      <button type="button" disabled={pending||dirty||draft.items.length===0||draft.items.some(item=>item.priceChanged)} onClick={()=>void perform(`${api}/confirm`,"POST",{version:draft.version,taxVersion:draft.taxVersion},"Order confirmed.")}>Confirm order</button>
     </section>
     <div className={styles.actions}><button type="button" disabled={pending} onClick={async()=>{setPending(true);setError("");setNotice("");try{await reload();setNotice("Draft reloaded.");}catch(error){setError(error instanceof Error?error.message:"Unable to reload draft.");}finally{setPending(false);}}}>Reload draft</button><span>Reload discards unsaved edits and fetches current catalog prices and tax settings.</span></div>
     <p role="alert" className={styles.error}>{error}</p><p role="status" className={styles.notice}>{notice}</p>

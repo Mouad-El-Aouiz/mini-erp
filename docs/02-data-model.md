@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Tenant, authentication records, Membership, Customer, Product, physical InventoryBalance and manual StockMovement, draft Order and OrderItem are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership, Customer, Product, InventoryBalance with physical/reserved quantities, manual StockMovement, Order/OrderItem and StockReservation are implemented. DRAFT and CONFIRMED are supported. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
@@ -51,7 +51,7 @@ Unique (tenant_id, user_id). A user may belong to multiple tenants. The server v
 
 ## TenantSettings
 
-One settings record per tenant.
+Implemented tax_rate_bps and tax_version live directly on Tenant. A separate settings record and settings audit actor remain future design.
 
 | Field | Constraint or purpose |
 | --- | --- |
@@ -61,7 +61,7 @@ One settings record per tenant.
 | updated_at | Required timestamp |
 | updated_by_membership_id | Same-tenant administrator who changed settings |
 
-Proposed representation: basis points, where 100 basis points equal 1 percentage point and 1000 represent the approved demonstration rate of 10%. Supported precision and maximum rate require approval. Zero is distinct from absent configuration. Only the tenant administrator can modify settings; a foreign key does not enforce that permission.
+Implemented representation: basis points, where 100 basis points equal 1 percentage point and 1000 represent the demonstration rate of 10%. Supported rates are 0–10000, with 0.01 percentage-point precision. Zero is distinct from absent configuration. Only the tenant administrator can modify settings; a foreign key does not enforce that permission.
 
 ## Customer
 
@@ -105,7 +105,7 @@ A SKU identifies a catalog product, not an individual serialized device. Serial 
 
 ## Order
 
-Implemented draft creation, editing and current tax previews. Only DRAFT exists today. Confirmation/fulfillment fields and statuses described below remain proposed. See [Draft orders API](07-draft-orders-api.md).
+Implemented draft preparation and DRAFT → CONFIRMED. Confirmation stores the accepted tax rate/version, subtotal, rounded tax, total, customer company name, timestamp and same-tenant confirming actor. Delivery/cancellation fields remain proposed. See [Draft orders API](07-draft-orders-api.md) and [Order confirmation](08-order-confirmation-api.md).
 
 A customer's order within one tenant.
 
@@ -114,21 +114,23 @@ A customer's order within one tenant.
 | id | Primary key |
 | tenant_id | Required foreign key to Tenant |
 | customer_id | Required same-tenant reference to Customer |
-| status | DRAFT, CONFIRMED, DELIVERED or CANCELLED |
+| status | DRAFT or CONFIRMED; DELIVERED/CANCELLED deferred |
 | currency | USD |
 | subtotal_cents | Accepted subtotal snapshot; required after confirmation |
-| tax_rate_bps | Accepted rate snapshot; required after confirmation |
+| accepted_tax_rate_bps | Accepted rate snapshot; required after confirmation |
 | tax_cents | Accepted rounded tax snapshot; required after confirmation |
 | total_cents | Accepted total snapshot; required after confirmation |
 | created_by_membership_id | Required same-tenant actor |
 | confirmed_by_membership_id | Required after confirmation |
+| confirmed_tax_version | Reviewed settings version, required after confirmation |
+| customer_company_name | Accepted company name, required after confirmation |
 | cancelled_by_membership_id | Required when cancelled |
 | created_at | Required timestamp |
 | updated_at | Required timestamp |
 | confirmed_at | Required after confirmation |
 | cancelled_at | Required when cancelled |
 
-Snapshot amounts are nonnegative and total_cents equals subtotal_cents plus tax_cents. Draft previews are derived from captured line prices and current settings; they are not confirmed financial records.
+Snapshot amounts are nonnegative and total_cents equals subtotal_cents plus tax_cents. Draft previews are derived from captured line prices and current settings; they are not confirmed financial records. PostgreSQL checks require all snapshot fields to be absent for DRAFT and complete/consistent for CONFIRMED. total_cents uses BIGINT, bounded by the supported subtotal and tax rate, and serializes as a safe JSON number.
 
 Proposed transitions: DRAFT to CONFIRMED, then CONFIRMED to DELIVERED or CANCELLED. The server enforces legal transitions; a status check constraint alone does not enforce the workflow.
 
@@ -151,46 +153,50 @@ One product and quantity within an order.
 
 Implemented uniqueness: (tenant_id, order_id, product_id). Repeated additions in the UI increase the existing quantity; duplicate IDs in API input are rejected.
 
-Order version checks reject stale edits. Creation request IDs are tenant-unique and retain the initial request fingerprint. Per-tenant tax_rate_bps defaults to 1000 and tax_version protects updates. Draft totals are derived; confirmed snapshots remain deferred.
+Order version checks reject stale edits. Creation request IDs are tenant-unique and retain the initial request fingerprint. Per-tenant tax_rate_bps defaults to 1000 and tax_version protects updates. Draft totals are derived; confirmed totals are stored and are not recalculated from later settings.
 
 Capture the catalog price when adding a line. A changed catalog price blocks confirmation until the user explicitly refreshes prices. Recheck at confirmation. Freeze lines and accepted totals after confirmation.
 
 ## InventoryBalance
 
-Implemented: one physical inventory balance per product and tenant, at one stock location. See [Inventory API](06-inventory-api.md). Reservations below describe future design.
+Implemented: one physical/reserved balance per product and tenant, at one stock location. See [Inventory API](06-inventory-api.md).
 
 | Field | Constraint or purpose |
 | --- | --- |
 | tenant_id | Required tenant ownership, enforced through the composite product foreign key |
 | product_id | Required same-tenant reference to Product |
 | physical_quantity | Required nonnegative integer |
-| reserved_quantity | Proposed future field; not implemented |
+| reserved_quantity | Required integer, from zero to physical_quantity |
 | updated_at | Required timestamp |
 
 Primary key (tenant_id, product_id), with a same-tenant product foreign key. physical_quantity is an integer from 0 to 2147483647. Catalog creation initializes zero; manual adjustments update it atomically with movements.
 
-Future reservation design: require reserved_quantity <= physical_quantity. Derive available_quantity as physical_quantity minus reserved_quantity; do not store a third independently mutable balance.
+SQL requires 0 <= reserved_quantity <= physical_quantity. Derive available_quantity as physical_quantity minus reserved_quantity; do not store a third independently mutable balance.
 
-These balances are transactionally maintained summaries, not independent facts. Future reconciliation will compare physical quantity with stock movements and reserved quantity with active reservations.
+These balances are transactionally maintained summaries, not independent facts. Tests compare reserved quantity with reservation rows. Operational reconciliation will compare physical quantity with stock movements and reserved quantity with outstanding reservations.
 
 ## StockReservation
 
-Proposed allocation of stock to an order line. The underlying reservation policy still requires business approval.
+Implemented allocation of stock to a confirmed order line. Confirmation creates
+one reservation per product, matching the line quantity, in the same transaction
+as the reserved balance and accepted snapshots.
 
 | Field | Constraint or purpose |
 | --- | --- |
-| id | Primary key |
-| tenant_id | Required foreign key to Tenant |
-| order_id | Required same-tenant reference to Order |
-| order_item_id | Required reference to a line belonging to that order |
-| quantity | Required positive integer, matching confirmed line quantity |
-| status | ACTIVE, CONSUMED or RELEASED |
-| created_at | Required timestamp |
-| closed_at | Required for CONSUMED or RELEASED |
+| tenant_id | Same tenant as order, product and line |
+| order_id | Required same-tenant order |
+| product_id | Required product on the referenced order line |
+| quantity | 1–1000000, matches the confirmed line in the application |
+| created_at | Reservation timestamp |
 
-Unique (tenant_id, order_item_id) for the proposed terminal order lifecycle. Derive the product through OrderItem to avoid an inconsistent duplicate product reference. Validate cross-record quantity equality within the transaction.
+Primary key (tenant_id, order_id, product_id). Composite foreign keys reference
+Order, Product and the exact OrderItem. SQL rejects duplicate reservations and
+invalid quantities. The counter/row aggregate equality is maintained by the
+application transaction, not a SQL aggregate constraint.
 
-Confirmation creates ACTIVE reservations. Delivery marks them CONSUMED; cancellation marks them RELEASED. Keep records for traceability rather than deleting them.
+All current reservations are outstanding. Delivery/cancellation and reservation
+closure fields are deferred. A later migration must introduce traceable consumption
+and release before these transitions are exposed.
 
 ## Delivery
 
@@ -261,7 +267,7 @@ Delivery: validate actor and CONFIRMED state; create the complete delivery, cons
 
 Cancellation: validate tenant administrator and CONFIRMED state; release reservations, decrease reserved balances and set CANCELLED in one transaction without changing physical stock.
 
-Use database-supported locking or conditional updates so competing transitions and stock allocations cannot both pass stale checks. Choose the exact strategy after selecting the engine. Acquire product locks in a stable order for multi-product orders and define bounded retry handling.
+Use database-supported locking or conditional updates so competing transitions and stock allocations cannot both pass stale checks. Confirmation uses PostgreSQL row locks in a stable product UUID order and a 15-second transaction timeout. Unexpected failures require an explicit retry; no automatic transaction retry is implemented.
 
 Price and tax snapshots must be consistent at confirmation, including concurrent catalog/settings changes. A check performed outside the transaction is insufficient.
 
@@ -297,8 +303,8 @@ Foreign-key indexing behavior varies by engine; inspect it rather than assuming 
 ## Open Decisions Before Migrations
 
 - Identifier types for remaining entities and production authentication recovery/verification workflows.
-- Approval of stock reservation policy and duplicate product-line handling.
-- Monetary bounds, rounding rule, tax rate precision and maximum.
+- Reservation closure records for delivery and cancellation.
+- Final order numbering and invoice requirements.
 - Account/membership deactivation and historical actor retention.
 - Customer/product archival, duplicate handling and draft abandonment.
 - Initial inventory and adjustment workflow details.
