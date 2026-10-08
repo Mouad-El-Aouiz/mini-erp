@@ -1,6 +1,6 @@
 # Technical Architecture
 
-Status: proposed architecture.
+Status: implemented modular monolith; cloud hosting remains undecided.
 
 ## Application Structure
 
@@ -30,16 +30,16 @@ User interface → API → Business service → Data access → Database
 
 ## Database
 
-Proposed engine: PostgreSQL.
+Engine: PostgreSQL 18.
 
-Proposed data access and migration tooling: Prisma. Verify its setup and supported versions before implementation.
+Data access and migration tooling: Prisma 7 with the PostgreSQL driver adapter.
 
-## Proposed Data Access Tooling
+## Data Access Tooling
 
 Use Prisma for typed database access and schema migrations.
 
-This choice remains subject to a setup verification before
-implementation.
+The generated client is recreated during installation/build; committed SQL migrations
+define the database history.
 
 Keep database access separate from API handlers and business rules.
 
@@ -79,7 +79,18 @@ Deploy a staging environment before considering production.
 
 ## Open Decisions
 
-- Authentication solution.
-- Verify the proposed Prisma setup and supported versions.
-- Test tooling.
-- Hosting and database deployment.
+- Hosting, TLS, production configuration and database deployment.
+- Production onboarding, backups and deployment coordination.
+
+## Implemented Runtime and Quality Tooling
+
+Better Auth provides database-backed sessions. Prisma uses committed PostgreSQL
+migrations and explicit transactions for order/stock invariants. Node test runner
+covers validation/arithmetic; Playwright exercises UI, API, database constraints
+and concurrency. GitHub Actions runs application and container checks.
+
+The optional Docker runtime uses Linux standalone Next.js output, a separate
+one-shot migration image and runtime environment injection. PostgreSQL persists
+in a named volume; the web runtime is non-root with a read-only root filesystem.
+The public readiness endpoint exposes only database connectivity state.
+See [Container runtime](11-container-runtime.md) for the operational contract.

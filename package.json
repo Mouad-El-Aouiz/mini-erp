@@ -12,7 +12,8 @@
     "db:create-dev-user": "node --conditions=react-server --import tsx scripts/create-dev-user.ts",
     "test:e2e": "playwright test",
     "db:create-dev-company": "node --conditions=react-server --import tsx scripts/create-dev-company.ts",
-    "test:unit": "node --conditions=react-server --import tsx --test tests/unit/*.test.ts"
+    "test:unit": "node --conditions=react-server --import tsx --test tests/unit/*.test.ts",
+    "test:container": "node scripts/check-container.mjs"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.7",

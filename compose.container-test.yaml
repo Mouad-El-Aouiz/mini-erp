@@ -1,0 +1,65 @@
+name: mini-erp-container-tests
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: mini_erp_test
+      POSTGRES_USER: mini_erp_test
+      POSTGRES_PASSWORD: test_only_password
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - container_test_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U mini_erp_test -d mini_erp_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  migrations:
+    image: mini-erp-migrations:test
+    build:
+      context: .
+      target: migrations
+    environment:
+      DATABASE_URL: postgresql://mini_erp_test:test_only_password@db:5432/mini_erp_test?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=0700
+      - /home/node/.cache:uid=1000,gid=1000,mode=0700
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  app:
+    image: mini-erp-app:test
+    build:
+      context: .
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://mini_erp_test:test_only_password@db:5432/mini_erp_test?schema=public
+      BETTER_AUTH_URL: http://127.0.0.1:3100
+      BETTER_AUTH_SECRET: test-only-auth-secret-never-use-in-production-2026
+    ports:
+      - "127.0.0.1:3100:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=0700
+      - /app/.next/cache:uid=1000,gid=1000,mode=0700
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 30s
+
+volumes:
+  container_test_data:
