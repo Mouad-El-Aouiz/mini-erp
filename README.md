@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, plus the role-protected product catalog, are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, and physical stock adjustment history are implemented. Membership management and the remaining business modules are deferred.
 
 ## Working Process
 
@@ -52,7 +52,7 @@ npm run dev
 ```
 
 Open http://localhost:3000. Stop the development server with Ctrl+C.
-The home page summarizes module availability. Sign in and select a company to manage its customers and products.
+The home page summarizes module availability. Sign in and select a company to manage its customers, products and physical stock.
 
 ## Quality Checks
 
@@ -292,7 +292,7 @@ unavailable page. Anonymous requests redirect to sign-in.
 
 Company links disable prefetching, and returning to the selector fetches the
 current memberships. Role labels are informational; future business operations
-must enforce their own tenant and role checks. The workspace links to customer and product management; orders and inventory remain deferred.
+must enforce their own tenant and role checks. The workspace links to customer and product management; orders and reservations remain deferred.
 
 See [TENANT-002](docs/tickets/TENANT-002.md) for scope and validation.
 
@@ -320,7 +320,7 @@ access. This script does not reactivate a revoked membership or promote an
 existing employee. Concurrent conflicting setup runs may fail; rerun after the
 first completes.
 
-Sign in and open `/dashboard` to select the demo company and manage its customers and products. This is a local setup utility, not production onboarding.
+Sign in and open `/dashboard` to select the demo company and manage its customers, products and physical stock. This is a local setup utility, not production onboarding.
 See [SETUP-002](docs/tickets/SETUP-002.md).
 
 ## Business Customers
@@ -369,5 +369,21 @@ Pages:
 - `/tenants/[tenantId]/products/[productId]/edit`: administrator edit form.
 
 Product writes use the same session, tenant and Origin policy as customers and
-add the ADMIN role requirement. Stock, taxes, orders and deletion are deferred.
+add the ADMIN role requirement. Physical stock is available through inventory management. Taxes, orders and deletion are deferred.
 See [Products API](docs/05-products-api.md) and [PRODUCT-001](docs/tickets/PRODUCT-001.md).
+
+## Physical Inventory
+
+Select **Manage inventory** in your company workspace. Each catalog product
+starts at zero units. Administrators record positive receipts or negative
+corrections with a required reason; employees can consult the quantity/history.
+Physical stock cannot become negative. No movement edit/delete operation exists.
+
+- `/tenants/[tenantId]/inventory`: paginated physical stock list.
+- `/tenants/[tenantId]/inventory/[productId]`: history and administrator form.
+
+If a response is lost, retry with unchanged values so the form reuses its request
+ID. A successful adjustment is applied only once per request ID. Quantity changes
+and history commit together. Reservations and orders remain deferred.
+
+See [Inventory API](docs/06-inventory-api.md) and [STOCK-001](docs/tickets/STOCK-001.md).
