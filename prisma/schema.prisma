@@ -103,6 +103,9 @@ model Membership {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
+  stockMovements StockMovement[]
+
+  @@unique([tenantId, id])
   @@unique([tenantId, userId])
   @@index([userId])
   @@map("memberships")
@@ -141,8 +144,44 @@ model Product {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  inventoryBalance InventoryBalance?
+  stockMovements   StockMovement[]
+
   @@unique([tenantId, sku])
   @@unique([tenantId, id])
   @@index([tenantId, name, id])
   @@map("products")
+}
+
+model InventoryBalance {
+  tenantId         String   @map("tenant_id") @db.Uuid
+  productId        String   @map("product_id") @db.Uuid
+  /// Nonnegative physical units; enforced by inventory_physical_non_negative in SQL.
+  physicalQuantity Int      @default(0) @map("physical_quantity")
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  product Product @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, productId])
+  @@map("inventory_balances")
+}
+
+model StockMovement {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId               String   @map("tenant_id") @db.Uuid
+  productId              String   @map("product_id") @db.Uuid
+  requestId              String   @map("request_id") @db.Uuid
+  /// Nonzero signed units; enforced by stock_movements_delta_non_zero in SQL.
+  quantityDelta          Int      @map("quantity_delta")
+  reason                 String
+  recordedByMembershipId String   @map("recorded_by_membership_id") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  product    Product    @relation(fields: [tenantId, productId], references: [tenantId, id], onDelete: Restrict)
+  recordedBy Membership @relation(fields: [tenantId, recordedByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, requestId])
+  @@index([tenantId, productId, createdAt, id])
+  @@index([tenantId, recordedByMembershipId])
+  @@map("stock_movements")
 }

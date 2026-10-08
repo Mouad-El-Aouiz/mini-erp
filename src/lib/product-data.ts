@@ -48,7 +48,7 @@ export async function createProduct(access: ProductAccess, input: ProductInput) 
   return prisma.$transaction(async (transaction) => {
     await lockActiveMembership(transaction, access, "ADMIN");
     return transaction.product.create({
-      data: { ...input, tenantId: access.tenantId }, select: productSelect,
+      data: { ...input, tenantId: access.tenantId, inventoryBalance: { create: { physicalQuantity: 0 } } }, select: productSelect,
     });
   });
 }

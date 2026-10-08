@@ -1,6 +1,6 @@
 # Data Model
 
-Status: Tenant, authentication records, Membership, Customer and Product are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership, Customer, Product, physical InventoryBalance and manual StockMovement are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
@@ -10,7 +10,7 @@ Status: Tenant, authentication records, Membership, Customer and Product are imp
 - Every tenant-owned entity has a required tenant_id referencing Tenant.
 - Use integer USD cents for monetary amounts as a proposed technical representation. Select database types and safe arithmetic limits before implementation.
 - Store timestamps consistently; timezone and display formatting are separate concerns.
-- Do not delete historical orders or inventory records through cascading deletion.
+- Historical records use restricted deletion. Disposable derived zero balances may cascade with products; movements prevent deleting referenced products.
 
 ## Tenant
 
@@ -151,19 +151,21 @@ Capture the catalog price when adding a line. A changed catalog price blocks con
 
 ## InventoryBalance
 
-One inventory balance per product and tenant, assuming one stock location.
+Implemented: one physical inventory balance per product and tenant, at one stock location. See [Inventory API](06-inventory-api.md). Reservations below describe future design.
 
 | Field | Constraint or purpose |
 | --- | --- |
-| tenant_id | Required foreign key to Tenant |
+| tenant_id | Required tenant ownership, enforced through the composite product foreign key |
 | product_id | Required same-tenant reference to Product |
 | physical_quantity | Required nonnegative integer |
-| reserved_quantity | Required nonnegative integer |
+| reserved_quantity | Proposed future field; not implemented |
 | updated_at | Required timestamp |
 
-Primary key (tenant_id, product_id). Require reserved_quantity <= physical_quantity. Derive available_quantity as physical_quantity minus reserved_quantity; do not store a third independently mutable balance.
+Primary key (tenant_id, product_id), with a same-tenant product foreign key. physical_quantity is an integer from 0 to 2147483647. Catalog creation initializes zero; manual adjustments update it atomically with movements.
 
-These balances are transactionally maintained summaries, not independent facts. Reconciliation compares physical quantity with stock movements and reserved quantity with active reservations.
+Future reservation design: require reserved_quantity <= physical_quantity. Derive available_quantity as physical_quantity minus reserved_quantity; do not store a third independently mutable balance.
+
+These balances are transactionally maintained summaries, not independent facts. Future reconciliation will compare physical quantity with stock movements and reserved quantity with active reservations.
 
 ## StockReservation
 
@@ -200,17 +202,18 @@ Unique (tenant_id, order_id) enforces at most one delivery per order. Fulfilled 
 
 ## StockMovement
 
-An immutable record of a physical stock change.
+Implemented: append-only manual adjustments through the application, with stable same-tenant actor references. Privileged direct SQL is not blocked from changing history. Delivery-specific fields and kinds below remain proposed.
 
 | Field | Constraint or purpose |
 | --- | --- |
 | id | Primary key |
 | tenant_id | Required foreign key to Tenant |
 | product_id | Required same-tenant reference to Product |
+| request_id | Implemented UUID, unique with tenant_id; repeated identical requests apply once |
 | quantity_delta | Required nonzero signed integer |
-| kind | INITIAL, ADJUSTMENT or DELIVERY |
-| delivery_id | Same-tenant reference; required for DELIVERY |
-| order_item_id | Required for DELIVERY, otherwise absent |
+| kind | Proposed future field: INITIAL, ADJUSTMENT or DELIVERY |
+| delivery_id | Proposed same-tenant reference; required for DELIVERY |
+| order_item_id | Proposed: required for DELIVERY, otherwise absent |
 | reason | Required, nonblank for INITIAL and ADJUSTMENT |
 | recorded_by_membership_id | Required same-tenant actor |
 | created_at | Required timestamp |
@@ -219,7 +222,7 @@ Positive deltas increase physical stock; negative deltas decrease it. Delivery d
 
 Enforce one delivery movement per delivered order line, using a conditional uniqueness constraint or an equivalent database-specific design. Confirmation and cancellation do not create physical movements.
 
-Record initial stock and administrator adjustments as movements in the same transaction as balance changes. Reject adjustments that make physical stock negative or lower than active reservations. Correct mistakes through compensating movements, not edits to history.
+Record initial stock and administrator adjustments as movements in the same transaction as balance changes. Implemented adjustments reject negative physical stock. Rejecting stock lower than active reservations belongs to the future reservation module. Correct mistakes through compensating movements, not edits to history.
 
 ## Tenant-Safe Relationships
 
