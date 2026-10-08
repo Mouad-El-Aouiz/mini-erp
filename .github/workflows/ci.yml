@@ -78,10 +78,13 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Run unit tests
+        run: npm run test:unit
+
       - name: Build application
         run: npm run build
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
 
-      - name: Test authentication and tenant access end to end
+      - name: Test application flows and local setup
         run: npm run test:e2e

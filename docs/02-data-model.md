@@ -1,11 +1,11 @@
 # Data Model
 
-Status: proposed logical design, not implemented. This document extends the business scope without approving its open business questions.
+Status: Tenant, authentication records, Membership and Customer are implemented. The remaining entities describe proposed logical design. This document extends the business scope without approving its open business questions.
 
 ## Design Principles
 
-- Use a relational database; choose its engine before writing migrations.
-- Give each entity a stable primary key. Identifier types remain to be selected.
+- Use PostgreSQL 18 as the relational database.
+- Use stable primary keys. Implemented tenants, memberships and customers use UUIDs; Better Auth user and authentication IDs use text. Types for remaining entities will be selected during implementation.
 - Use required fields, foreign keys, uniqueness and check constraints alongside server validation.
 - Every tenant-owned entity has a required tenant_id referencing Tenant.
 - Use integer USD cents for monetary amounts as a proposed technical representation. Select database types and safe arithmetic limits before implementation.
@@ -33,7 +33,7 @@ A person who can authenticate, independent of tenant-specific roles.
 | display_name | Required, nonblank |
 | created_at | Required timestamp |
 
-Authentication mechanism and credential/session storage are not selected. Never store plaintext passwords. Define account deactivation before implementation.
+Better Auth manages credential hashes and database-backed sessions. Public registration is disabled. Account deactivation remains deferred; membership deactivation is separate.
 
 ## Membership
 
@@ -47,7 +47,7 @@ A user's role within a tenant.
 | role | ADMIN or EMPLOYEE |
 | created_at | Required timestamp |
 
-Unique (tenant_id, user_id). A user may belong to multiple tenants. The server validates membership in the active tenant on every protected operation. Historical actor references must survive membership revocation; select a deactivation policy before implementing removal.
+Unique (tenant_id, user_id). A user may belong to multiple tenants. The server validates membership in the active tenant on every protected operation. Revocation sets is_active to false without deleting the membership, preserving its stable identity for future historical actor references. Membership deletion is not implemented.
 
 ## TenantSettings
 
@@ -64,6 +64,8 @@ One settings record per tenant.
 Proposed representation: basis points, where 100 basis points equal 1 percentage point and 1000 represent the approved demonstration rate of 10%. Supported precision and maximum rate require approval. Zero is distinct from absent configuration. Only the tenant administrator can modify settings; a foreign key does not enforce that permission.
 
 ## Customer
+
+Implemented: tenant-scoped listing, creation and full editing. Duplicate company names are allowed; deletion and archival are deferred. See [Customers API](04-customers-api.md).
 
 A business purchasing hardware from a tenant.
 
@@ -281,7 +283,7 @@ Foreign-key indexing behavior varies by engine; inspect it rather than assuming 
 
 ## Open Decisions Before Migrations
 
-- Database engine, identifier types and authentication/session design.
+- Identifier types for remaining entities and production authentication recovery/verification workflows.
 - Approval of stock reservation policy and duplicate product-line handling.
 - Monetary bounds, rounding rule, tax rate precision and maximum.
 - Account/membership deactivation and historical actor retention.
