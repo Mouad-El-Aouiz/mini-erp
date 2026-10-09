@@ -482,9 +482,10 @@ npm run test:container
 CI adds **Container checks** alongside the existing application checks. Images are
 built and tested locally; registry publishing and cloud deployment are deferred.
 
-## Render Staging
+## Staging Database
 
-See [Render and Neon staging](docs/12-render-staging.md) for the free Docker
-Blueprint, main-only database setup workflow, initial administrator configuration
-and deployment validation. Secrets are configured privately in GitHub/Render.
-Initial automatic deployment remains disabled until the first live check succeeds.
+See [Staging database setup](docs/12-staging-database.md) for the
+main-only GitHub workflow, Neon configuration and initial administrator
+setup. Secrets are configured privately in the GitHub staging environment.
+
+Application hosting configuration is pending.
