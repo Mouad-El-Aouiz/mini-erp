@@ -14,7 +14,8 @@
     "db:create-dev-company": "node --conditions=react-server --import tsx scripts/create-dev-company.ts",
     "test:unit": "node --conditions=react-server --import tsx --test tests/unit/*.test.ts",
     "test:container": "node scripts/check-container.mjs",
-    "db:create-staging-admin": "node --import tsx scripts/create-staging-admin.ts"
+    "db:create-staging-admin": "node --import tsx scripts/create-staging-admin.ts",
+    "build:vercel": "prisma generate && next build"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.7",

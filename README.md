@@ -488,4 +488,5 @@ See [Staging database setup](docs/12-staging-database.md) for the
 main-only GitHub workflow, Neon configuration and initial administrator
 setup. Secrets are configured privately in the GitHub staging environment.
 
-Application hosting configuration is pending.
+See [Vercel staging deployment](docs/13-vercel-staging.md) for the Next.js build,
+private environment configuration and initial manual deployment procedure.
