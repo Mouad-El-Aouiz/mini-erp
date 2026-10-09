@@ -46,6 +46,7 @@ From the repository root:
 npm ci
 cp -n .env.example .env
 # Configure database credentials and authentication settings in .env before continuing.
+docker compose up -d --wait
 npx prisma generate
 npx prisma migrate deploy
 npm run dev
@@ -463,3 +464,20 @@ cancellation** to inspect the current order before retrying.
 Cancellation and delivery lock the same order and sorted product rows; only one
 terminal outcome can commit. Draft deletion, returns and reopening remain deferred.
 See [Cancellation API](docs/10-order-cancellation-api.md) and [ORDER-004](docs/tickets/ORDER-004.md).
+
+## Container Runtime
+
+An optional Compose overlay runs the compiled app with PostgreSQL and a one-shot
+migration service. The normal host development workflow remains available.
+See [Container runtime](docs/11-container-runtime.md) for private configuration,
+startup, persistence, readiness, test isolation and lifecycle commands.
+
+```bash
+# After configuring CONTAINER_DATABASE_URL and authentication settings in .env:
+docker compose -f compose.yaml -f compose.app.yaml up --build -d --wait
+# Disposable container verification, separate from the development database:
+npm run test:container
+```
+
+CI adds **Container checks** alongside the existing application checks. Images are
+built and tested locally; registry publishing and cloud deployment are deferred.
