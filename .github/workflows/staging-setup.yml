@@ -1,0 +1,51 @@
+name: Staging database setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      bootstrap_admin:
+        description: Create the initial administrator and company (requires configured staging secrets)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-database-setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: staging
+    env:
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_DATABASE_HOST: ${{ vars.STAGING_DATABASE_HOST }}
+      STAGING_SETUP_CONFIRM: mini-erp-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.2"
+          cache: npm
+      - run: npm ci
+      - name: Validate the staging database destination
+        run: node --import tsx scripts/validate-staging-target.ts
+      - name: Apply committed migrations
+        run: node node_modules/prisma/build/index.js migrate deploy
+      - name: Generate Prisma client
+        run: node node_modules/prisma/build/index.js generate
+      - name: Bootstrap initial administrator
+        if: inputs.bootstrap_admin
+        env:
+          STAGING_ADMIN_EMAIL: ${{ vars.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_NAME: ${{ vars.STAGING_ADMIN_NAME }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+          STAGING_TENANT_ID: ${{ vars.STAGING_TENANT_ID }}
+          STAGING_TENANT_NAME: ${{ vars.STAGING_TENANT_NAME }}
+        run: npm run db:create-staging-admin

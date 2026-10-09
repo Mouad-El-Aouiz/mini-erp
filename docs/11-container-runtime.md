@@ -133,5 +133,5 @@ docker compose -p mini-erp-container-tests -f compose.container-test.yaml down -
 ```
 
 CI retains the full native application suite and adds an independent **Container
-checks** job using eight representative container flows and lifecycle checks. It builds
+checks** job using representative container flows, staging bootstrap scenarios and lifecycle checks. It builds
 locally on the runner without publishing images or deploying a service.
