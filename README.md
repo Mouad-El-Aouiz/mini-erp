@@ -26,7 +26,7 @@ Application foundation, PostgreSQL access, email/password authentication, tenant
 ## Working Process
 
 Each feature follows:
-ticket → branch → implementation → verification → review → merge.
+ticket â†’ branch â†’ implementation â†’ verification â†’ review â†’ merge.
 
 Project documentation, code and interface content use English.
 
@@ -481,3 +481,10 @@ npm run test:container
 
 CI adds **Container checks** alongside the existing application checks. Images are
 built and tested locally; registry publishing and cloud deployment are deferred.
+
+## Render Staging
+
+See [Render and Neon staging](docs/12-render-staging.md) for the free Docker
+Blueprint, main-only database setup workflow, initial administrator configuration
+and deployment validation. Secrets are configured privately in GitHub/Render.
+Initial automatic deployment remains disabled until the first live check succeeds.

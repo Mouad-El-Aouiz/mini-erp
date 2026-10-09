@@ -83,6 +83,7 @@ try {
   compose(["run", "--rm", "--no-deps", "migrations"]);
   console.log(`PASS: ${expectedMigrations} migrations applied and deployment replay is harmless`);
   execFileSync(process.execPath, ["node_modules/prisma/build/index.js", "generate"], { env: testEnv, stdio: "inherit" });
+  execFileSync(process.execPath, ["--import", "tsx", "--test", "tests/integration/staging-setup.test.ts"], { env: testEnv, stdio: "inherit" });
   const smoke = [
     "sign-in persists and sign-out",
     "employees can create and edit customers",
