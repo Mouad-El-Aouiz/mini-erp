@@ -15,7 +15,9 @@ and container verification. Node.js 22.x should be selected in project settings.
 The committed vercel.json uses npm ci and npm run build:vercel.
 That script generates Prisma Client before next build, including on fresh or
 cached cloud builds. Generation does not apply migrations or create users.
-The generated client is excluded from Git. Functions run in cle1 (us-east-2),
+The generated client is excluded from Git. The .vercelignore file also excludes
+local environment files, credentials, generated artifacts and test reports from
+CLI uploads; Git exclusions alone do not define the Vercel upload boundary. Functions run in cle1 (us-east-2),
 near the existing Neon database. The framework manages the output directory.
 
 ## Account and Project

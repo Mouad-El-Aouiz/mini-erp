@@ -1,0 +1,11 @@
+# Cloud builds use environment values configured in Vercel.
+.env*
+.vercel/
+node_modules/
+.next/
+out/
+src/generated/prisma/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
