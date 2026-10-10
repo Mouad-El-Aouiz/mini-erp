@@ -43,6 +43,7 @@ export default async function TenantWorkspacePage({
         <p><Link href={`/tenants/${tenant.id}/products`} prefetch={false}>Manage products</Link></p>
         <p><Link href={`/tenants/${tenant.id}/inventory`} prefetch={false}>Manage inventory</Link></p>
         <p><Link href={`/tenants/${tenant.id}/orders`} prefetch={false}>Manage orders</Link></p>
+        {membership.role === "ADMIN" && <p><Link href={`/tenants/${tenant.id}/members`} prefetch={false}>Manage members</Link></p>}
         {membership.role === "ADMIN" && <p><Link href={`/tenants/${tenant.id}/tax-settings`} prefetch={false}>Tax settings</Link></p>}
       </section>
     </main>

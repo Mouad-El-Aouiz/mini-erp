@@ -21,7 +21,7 @@ A multi-tenant SaaS for B2B computer hardware sales.
 
 ## Project Status
 
-Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and orders with tax previews, confirmation/reservations, complete delivery and administrator cancellation are implemented. Membership management and the remaining business modules are deferred.
+Application foundation, PostgreSQL access, email/password authentication, tenant memberships, and company selection are implemented. Business customer listing, creation and editing, the role-protected product catalog, physical stock adjustment history, and orders with tax previews, confirmation/reservations, complete delivery and administrator cancellation are implemented. Administrator member provisioning, role updates and company access deactivation/reactivation are implemented. Existing-account invitations and global password recovery remain deferred.
 
 ## Working Process
 

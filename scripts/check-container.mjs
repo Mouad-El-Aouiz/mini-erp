@@ -87,6 +87,7 @@ try {
   const smoke = [
     "sign-in persists and sign-out",
     "employees can create and edit customers",
+    "administrator creates a member through the browser",
     "administrators create and edit exact USD prices",
     "administrators record receipts and corrections",
     "employees confirm through the mobile interface",
