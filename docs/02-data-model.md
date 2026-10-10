@@ -45,9 +45,11 @@ A user's role within a tenant.
 | tenant_id | Required foreign key to Tenant |
 | user_id | Required foreign key to User |
 | role | ADMIN or EMPLOYEE |
+| is_active | Company access status; history is retained |
+| version | Positive optimistic concurrency counter |
 | created_at | Required timestamp |
 
-Unique (tenant_id, user_id). A user may belong to multiple tenants. The server validates membership in the active tenant on every protected operation. Revocation sets is_active to false without deleting the membership, preserving its stable identity for future historical actor references. Membership deletion is not implemented.
+Unique (tenant_id, user_id). A user may belong to multiple tenants. The server validates membership in the active tenant on every protected operation. Revocation sets is_active to false without deleting the membership, preserving its stable identity for future historical actor references. Membership deletion is not implemented. Administrator-only creation and versioned role/access management are implemented; at least one active administrator must remain. See [Company members](14-members-api.md).
 
 ## TenantSettings
 
