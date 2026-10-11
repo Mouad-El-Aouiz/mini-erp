@@ -490,3 +490,10 @@ setup. Secrets are configured privately in the GitHub staging environment.
 
 See [Vercel staging deployment](docs/13-vercel-staging.md) for the Next.js build,
 private environment configuration and initial manual deployment procedure.
+
+## Account Settings
+
+Authenticated users can change their password from **Account settings** on the
+company dashboard. Other active sessions are revoked after a successful change.
+See [Account password changes](docs/16-account-password.md) for validation,
+session behavior, verification and recovery limitations.
