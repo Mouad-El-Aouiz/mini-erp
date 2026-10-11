@@ -99,15 +99,15 @@ test("employees create and edit drafts in the responsive interface without chang
   const id=page.url().split("/").pop()!;
   await page.getByLabel("Product to add",{exact:true}).selectOption(productId);await page.getByRole("button",{name:"Add product",exact:true}).click();
   await page.getByLabel("Quantity for Order laptop",{exact:true}).fill("2");
-  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Draft saved.");
+  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Draft saved."})).toHaveText("Draft saved.");
   await expect(page.getByText("Subtotal: $259.98 USD",{exact:true})).toBeVisible();await expect(page.getByText("Total: $285.98 USD",{exact:true})).toBeVisible();
   await page.getByLabel("Product to add",{exact:true}).selectOption(productId);await page.getByRole("button",{name:"Add product",exact:true}).click();
   await expect(page.getByLabel("Quantity for Order laptop",{exact:true})).toHaveValue("3");
-  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Draft saved.");
+  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Draft saved."})).toHaveText("Draft saved.");
   let order=await read(page,id);expect(order.items).toHaveLength(1);expect(order.items[0].quantity).toBe(3);
   await page.getByLabel("Customer",{exact:true}).selectOption(secondCustomerId);
   await page.getByRole("button",{name:"Remove Order laptop",exact:true}).click();
-  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Draft saved.");
+  await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Draft saved."})).toHaveText("Draft saved.");
   order=await read(page,id);expect(order.customerId).toBe(secondCustomerId);expect(order.items).toHaveLength(0);expect(order.totals.totalCents).toBe(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   expect((await database.query("SELECT physical_quantity FROM inventory_balances WHERE tenant_id=$1 AND product_id=$2",[tenantId,productId])).rows[0].physical_quantity).toBe(8);
@@ -134,7 +134,7 @@ test("captured prices persist through quantity edits and require explicit review
     const stale=await page.request.post(`${api}/${id}/refresh-prices`,{headers,data:{version:order.version,prices:[{productId,unitPriceCents:14000}]}});expect(stale.status()).toBe(409);
     await page.goto(`${listURL}/${id}`);await expect(page.getByText("Captured unit price: $129.99 USD",{exact:true})).toBeVisible();
     await expect(page.getByText(/Catalog price changed: \$150\.00 USD/)).toBeVisible();
-    await page.getByRole("button",{name:"Accept current catalog prices",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Catalog prices accepted.");
+    await page.getByRole("button",{name:"Accept current catalog prices",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Catalog prices accepted."})).toHaveText("Catalog prices accepted.");
     order=await read(page,id);expect(order.items[0].unitPriceCents).toBe(15000);expect(order.items[0].priceChanged).toBe(false);expect(order.totals.totalCents).toBe(49500);
   } finally {await database.query("UPDATE products SET unit_price_cents=12999 WHERE id=$1",[productId]);}
 });
@@ -237,7 +237,7 @@ test("stale editor errors retain values until an explicit reload",async({page})=
   expect((await save(page,id,2,[{productId,quantity:3}])).status()).toBe(200);
   await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.locator("main").getByRole("alert")).toHaveText("This draft has changed. Reload it before editing again.");
   await expect(page.getByLabel("Quantity for Order laptop",{exact:true})).toHaveValue("2");await page.getByRole("button",{name:"Reload draft",exact:true}).click();
-  await expect(page.getByRole("status")).toHaveText("Draft reloaded.");await expect(page.getByLabel("Quantity for Order laptop",{exact:true})).toHaveValue("3");
+  await expect(page.getByRole("status").filter({hasText:"Draft reloaded."})).toHaveText("Draft reloaded.");await expect(page.getByLabel("Quantity for Order laptop",{exact:true})).toHaveValue("3");
 });
 
 test("orders and entity pickers expose pages beyond the first twenty records",async({page})=>{
@@ -254,5 +254,5 @@ test("orders and entity pickers expose pages beyond the first twenty records",as
   await page.goto(`${listURL}/new`);await page.getByRole("button",{name:"Next customers",exact:true}).click();await page.getByLabel("Customer",{exact:true}).selectOption({label:"Paged client 22"});
   await page.getByRole("button",{name:"Create draft",exact:true}).click();await expect(page.getByRole("heading",{name:"Draft order",exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Next products",exact:true}).click();await page.getByLabel("Product to add",{exact:true}).selectOption({label:"Paged product 22 (PAGED-22)"});
-  await page.getByRole("button",{name:"Add product",exact:true}).click();await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Draft saved.");
+  await page.getByRole("button",{name:"Add product",exact:true}).click();await page.getByRole("button",{name:"Save draft",exact:true}).click();await expect(page.getByRole("status").filter({hasText:"Draft saved."})).toHaveText("Draft saved.");
 });

@@ -36,7 +36,7 @@ export function EntityPicker({tenantId,kind,label,value,selectedLabel,onChange,d
     </select>
     <div className={styles.actions}>
       {page>1&&<button type="button" disabled={disabled||loading} onClick={()=>setPage(page-1)}>Previous {kind}</button>}
-      <span>{kind==="customers"?"Customer":"Product"} page {page}{loading?" — Loading...":""}</span>
+      <span role="status" aria-live="polite">{kind==="customers"?"Customer":"Product"} page {page}{loading?" — Loading...":""}</span>
       {hasNext&&page<9999&&<button type="button" disabled={disabled||loading} onClick={()=>setPage(page+1)}>Next {kind}</button>}
     </div>
     {error&&<><p role="alert" className={styles.error}>{error}</p><button type="button" disabled={disabled} onClick={()=>setRetry(retry+1)}>Retry loading {kind}</button></>}

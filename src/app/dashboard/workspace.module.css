@@ -1,5 +1,6 @@
 .workspace {
   max-width: 1080px;
+  overflow-wrap: anywhere;
   margin: 0 auto;
   padding: clamp(24px, 5vw, 64px) 24px;
 }
@@ -44,3 +45,6 @@
 @media (max-width: 600px) {
   .header { flex-direction: column; }
 }
+
+.header > div { min-width: 0; }
+.pageActions { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
