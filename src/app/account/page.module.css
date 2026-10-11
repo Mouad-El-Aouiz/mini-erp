@@ -1,0 +1,53 @@
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.page h1 {
+  margin-top: 24px;
+}
+
+.page p {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.fields {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #ced8d0;
+  border-radius: 8px;
+}
+
+.fields input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px;
+  font: inherit;
+}
+
+.fields button {
+  padding: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fields button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.fields input:focus-visible,
+.fields button:focus-visible {
+  outline: 3px solid #946c18;
+  outline-offset: 3px;
+}
+
+.error {
+  color: #a01818;
+}

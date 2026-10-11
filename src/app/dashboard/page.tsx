@@ -24,6 +24,7 @@ export default async function DashboardPage() {
           <h1>Choose your company</h1>
           <p>Welcome, {session.user.name}. Select a company to open its workspace.</p>
         </div>
+        <Link href="/account">Account settings</Link>
         <SignOutButton />
       </header>
       {memberships.length === 0 ? (
