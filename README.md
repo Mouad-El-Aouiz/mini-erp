@@ -497,3 +497,8 @@ Authenticated users can change their password from **Account settings** on the
 company dashboard. Other active sessions are revoked after a successful change.
 See [Account password changes](docs/16-account-password.md) for validation,
 session behavior, verification and recovery limitations.
+
+## Interface Quality
+
+See [Interface review](docs/17-interface-review.md) for keyboard access,
+responsive layouts, recovery screens and staging acceptance checks.
