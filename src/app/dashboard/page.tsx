@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   if (!session) redirect("/sign-in");
 
   const memberships = await prisma.membership.findMany({
-    where: { userId: session.user.id, isActive: true },
+    where: { userId: session.user.id, isActive: true, tenant: { OR: [{ demoExpiresAt: null }, { demoExpiresAt: { gt: new Date() } }] } },
     select: { id: true, role: true, tenant: { select: { id: true, name: true } } },
     orderBy: [{ tenant: { name: "asc" } }, { tenantId: "asc" }],
   });

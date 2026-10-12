@@ -43,6 +43,7 @@ services:
       target: runtime
     environment:
       DATABASE_URL: postgresql://mini_erp_test:test_only_password@db:5432/mini_erp_test?schema=public
+      DEMO_SIGNUP_ENABLED: 'true'
       BETTER_AUTH_URL: http://127.0.0.1:3100
       BETTER_AUTH_SECRET: test-only-auth-secret-never-use-in-production-2026
     ports:

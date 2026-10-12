@@ -19,7 +19,7 @@ A multi-tenant application for B2B computer hardware sales, with an English inte
 | Change products/prices; adjust stock; configure tax | Yes | No |
 | Cancel confirmed orders; manage company members | Yes | No |
 
-Permissions are checked on the server and scoped to the company. Public sign-up is disabled.
+Permissions are checked on the server and scoped to the company. Native public sign-up is disabled; an opt-in personal demo registration flow provisions isolated fictional workspaces. See [demo registration](docs/20-demo-registration.md) for activation, limits and cleanup.
 
 ## Stack
 
@@ -143,7 +143,7 @@ Private configuration and the delivery flow are described in [staging database s
 
 - One stock location per company, USD only and complete deliveries only.
 - No supplier purchases, returns, serial-number tracking, payments, subscriptions or compliant invoice numbering.
-- No public registration, existing-account invitations, forgotten-password recovery, MFA or mandatory initial-password change.
+- No unrestricted public registration, existing-account invitations, forgotten-password recovery, MFA or mandatory initial-password change. Personal demo registration is separately gated and does not verify email ownership.
 - Authentication rate limits use per-instance memory. Password update and session replacement are not one atomic transaction in the installed authentication implementation.
 - Performance/load optimization, centralized observability, cloud backup/restore verification and a complete operational runbook are outside the current delivery scope.
 - Interface tests cover selected responsive and keyboard scenarios; they are not a complete accessibility certification.
@@ -156,6 +156,7 @@ CI audits production dependencies. The full audit also contains a known unpatche
 - APIs: [customers](docs/04-customers-api.md), [products](docs/05-products-api.md), [inventory](docs/06-inventory-api.md).
 - Orders: [drafts](docs/07-draft-orders-api.md), [confirmation](docs/08-order-confirmation-api.md), [delivery](docs/09-order-delivery-api.md), [cancellation](docs/10-order-cancellation-api.md).
 - [Company members](docs/14-members-api.md), [account passwords](docs/16-account-password.md), [interface review](docs/17-interface-review.md).
+- [Personal demo registration](docs/20-demo-registration.md).
 - [Final validation snapshot](docs/19-validation-summary.md).
 
 Numbered API documents describe implemented behavior; the data model marks proposed entities explicitly. Documents under docs/tickets retain implementation history.

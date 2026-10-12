@@ -14,6 +14,10 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  demoOwnerId   String?   @unique @map("demo_owner_id")
+  demoExpiresAt DateTime? @map("demo_expires_at") @db.Timestamptz(3)
+  demoOwner     User?     @relation("DemoOwner", fields: [demoOwnerId], references: [id], onDelete: Restrict)
+
   taxRateBps Int     @default(1000) @map("tax_rate_bps")
   taxVersion Int     @default(1) @map("tax_version")
   orders     Order[]
@@ -37,6 +41,8 @@ model User {
   accounts      Account[]
 
   memberships Membership[]
+
+  demoTenant Tenant? @relation("DemoOwner")
 
   @@unique([email])
   @@map("user")
@@ -336,4 +342,12 @@ model Cancellation {
   @@unique([tenantId, orderId])
   @@index([tenantId, cancelledByMembershipId])
   @@map("cancellations")
+}
+
+model DemoSignupAttempt {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("demo_signup_attempts")
 }

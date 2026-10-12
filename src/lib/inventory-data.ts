@@ -1,3 +1,4 @@
+import { checkDemoCreation } from "@/lib/demo-limits";
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -63,6 +64,7 @@ export async function adjustInventory(access: TenantAccess, productId: string, i
       }
       return { movement: movementRecord(previous), replayed: true };
     }
+    await checkDemoCreation(tx, access.tenantId, "movement");
     // A row lock serializes all physical changes for this product. Membership is locked first.
     const products = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM products WHERE tenant_id = ${access.tenantId}::uuid AND id = ${productId}::uuid FOR UPDATE`;

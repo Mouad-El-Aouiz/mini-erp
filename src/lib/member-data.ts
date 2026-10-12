@@ -1,3 +1,4 @@
+import { checkDemoCreation } from "@/lib/demo-limits";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
@@ -41,6 +42,7 @@ export async function createMember(access: TenantAccess, input: CreateMemberInpu
   return prisma.$transaction(async transaction => {
     await lockCompany(transaction, access.tenantId);
     await lockActiveMembership(transaction, access, "ADMIN");
+    await checkDemoCreation(transaction, access.tenantId, "member");
     // Do not reset, attach, or disclose an existing global identity.
     const existing = await transaction.user.findFirst({
       where: { email: { equals: input.email, mode: "insensitive" } }, select: { id: true },
