@@ -1,6 +1,6 @@
 # Technical Architecture
 
-Status: implemented modular monolith; cloud hosting remains undecided.
+Status: implemented modular monolith; staging runs on Vercel with PostgreSQL on Neon.
 
 ## Application Structure
 
@@ -79,8 +79,8 @@ Deploy a staging environment before considering production.
 
 ## Open Decisions
 
-- Hosting, TLS, production configuration and database deployment.
-- Production onboarding, backups and deployment coordination.
+- Production readiness and configuration beyond the current HTTPS staging deployment.
+- Production onboarding, backup/restore verification and operational procedures beyond the implemented staging release gate.
 
 ## Implemented Runtime and Quality Tooling
 

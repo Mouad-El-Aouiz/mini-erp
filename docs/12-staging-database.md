@@ -55,7 +55,7 @@ Back up before changes that risk existing data.
 Application deployment and database migrations are separate operations.
 Rolling back application code does not reverse database migrations.
 Use backward-compatible schema changes when the previous app remains live.
-A fully coordinated release pipeline remains separate work.
+The staging delivery workflow now applies committed migrations before deploying a candidate after successful main push CI. The manual workflow remains available for initial bootstrap and reviewed setup tasks. See [Vercel staging deployment](13-vercel-staging.md).
 
 ## Application Configuration
 
