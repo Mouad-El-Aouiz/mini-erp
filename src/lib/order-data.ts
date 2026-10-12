@@ -1,3 +1,4 @@
+import { checkDemoCreation } from "@/lib/demo-limits";
 import "server-only";
 import { createHash } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
@@ -79,6 +80,7 @@ export async function createDraft(access:TenantAccess,input:CreateDraftInput) {
       return {id:previous.id,replayed:true};
     }
     await customerExists(tx,access.tenantId,input.customerId);
+    await checkDemoCreation(tx, access.tenantId, "order");
     const order=await tx.order.create({data:{tenantId:access.tenantId,...input,requestHash,createdByMembershipId:access.id},select:{id:true}});
     return {...order,replayed:false};
   });

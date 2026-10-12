@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { demoRegistrationEnabled } from "@/lib/demo-config";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -18,6 +20,7 @@ export default async function SignInPage() {
       <h1>Sign in to Mini ERP</h1>
       <p>Enter your account credentials to continue.</p>
       <SignInForm />
+      {demoRegistrationEnabled() && <p><Link href="/sign-up">Try the demo</Link></p>}
     </main>
   );
 }

@@ -39,6 +39,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 60_000,
     env: {
+      DEMO_SIGNUP_ENABLED: "true",
       DATABASE_URL: databaseURL,
       BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,

@@ -49,10 +49,11 @@ export async function requireTenantAccess(
       userId: true,
       role: true,
       isActive: true,
+      tenant: { select: { demoExpiresAt: true } },
     },
   });
 
-  if (!membership || !membership.isActive) {
+  if (!membership || !membership.isActive || (membership.tenant.demoExpiresAt && membership.tenant.demoExpiresAt <= new Date())) {
     throw new TenantAccessError("FORBIDDEN");
   }
 

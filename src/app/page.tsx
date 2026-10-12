@@ -1,3 +1,4 @@
+import { demoRegistrationEnabled } from "@/lib/demo-config";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -7,6 +8,8 @@ const modules = [
   { number: "03", available: true, name: "Orders", description: "Prepare, confirm, deliver and cancel orders with accepted prices and stock history." },
   { number: "04", available: true, name: "Inventory", description: "Track physical, reserved and available stock with adjustment history." },
 ];
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
@@ -21,6 +24,7 @@ export default function Home() {
           <p className={styles.eyebrow}>B2B HARDWARE OPERATIONS</p>
           <h1 id="welcome-title">A clearer view of<br />your business.</h1>
           <p className={styles.intro}>One workspace for your customers, products, orders and inventory.</p>
+          {demoRegistrationEnabled() && <p><Link href="/sign-up">Try the demo</Link></p>}
           <p className={styles.notice}>Customers, products, inventory, complete delivery and administrator order cancellation are available.</p>
         </section>
         <section aria-labelledby="modules-title">

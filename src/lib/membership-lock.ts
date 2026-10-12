@@ -11,6 +11,8 @@ export async function lockActiveMembership(transaction: Prisma.TransactionClient
     SELECT id, role FROM memberships
     WHERE id = ${access.id}::uuid AND tenant_id = ${access.tenantId}::uuid
       AND user_id = ${access.userId} AND is_active = true
+      AND EXISTS (SELECT 1 FROM tenants WHERE tenants.id = memberships.tenant_id
+        AND (demo_expires_at IS NULL OR demo_expires_at > CURRENT_TIMESTAMP))
     FOR SHARE
   `;
   if (memberships.length === 0 || (requiredRole && memberships[0].role !== requiredRole)) throw new TenantAccessError("FORBIDDEN");

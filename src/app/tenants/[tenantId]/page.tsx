@@ -39,12 +39,13 @@ export default async function TenantWorkspacePage({
       <section className={styles.empty} aria-labelledby="workspace-title">
         <h2 id="workspace-title">Company workspace</h2>
         <p>Manage the customers, product catalog, stock and draft orders of this company.</p>
+        {membership.tenant.demoExpiresAt && <p>This is a temporary demo. Use fictional data only. Limit: 100 customers, products and orders each. Access expires at {membership.tenant.demoExpiresAt.toISOString()}. Member management is unavailable.</p>}
         <nav aria-label="Company modules">
           <Link href={`/tenants/${tenant.id}/customers`} prefetch={false}>Manage customers</Link>
           <p><Link href={`/tenants/${tenant.id}/products`} prefetch={false}>Manage products</Link></p>
           <p><Link href={`/tenants/${tenant.id}/inventory`} prefetch={false}>Manage inventory</Link></p>
           <p><Link href={`/tenants/${tenant.id}/orders`} prefetch={false}>Manage orders</Link></p>
-          {membership.role === "ADMIN" && <p><Link href={`/tenants/${tenant.id}/members`} prefetch={false}>Manage members</Link></p>}
+          {membership.role === "ADMIN" && !membership.tenant.demoExpiresAt && <p><Link href={`/tenants/${tenant.id}/members`} prefetch={false}>Manage members</Link></p>}
           {membership.role === "ADMIN" && <p><Link href={`/tenants/${tenant.id}/tax-settings`} prefetch={false}>Tax settings</Link></p>}
         </nav>
       </section>

@@ -1,3 +1,4 @@
+import { checkDemoCreation } from "@/lib/demo-limits";
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
@@ -47,6 +48,7 @@ export async function getCustomer(access: CustomerAccess, customerId: string) {
 export async function createCustomer(access: CustomerAccess, input: CustomerInput) {
   return prisma.$transaction(async (transaction) => {
     await lockActiveMembership(transaction, access);
+    await checkDemoCreation(transaction, access.tenantId, "customer");
     return transaction.customer.create({
       data: { ...input, tenantId: access.tenantId }, select: customerSelect,
     });
