@@ -2,7 +2,7 @@
 
 ## Scope
 
-Deploy the educational, non-commercial mini-ERP on Vercel Hobby using the
+Deploy the personal, non-commercial mini-ERP on Vercel Hobby using the
 existing Neon mini_erp_staging database. Vercel calls the primary deployment
 Production; this project and database still represent our staging environment.
 Do not provision another database or upgrade the account to a paid plan.
@@ -60,20 +60,36 @@ No authentication or database-provider migration is part of deployment.
 
 ## CI and Delivery
 
-GitHub Actions continues to run Application checks and Container checks against
-isolated test databases. Automatic Git deployments are disabled in vercel.json
-until a release gate and isolated preview configuration are established.
-An initial Dashboard import can create a deployment even when Git push deployments
-are disabled; configure private values before importing or use controlled CLI setup.
+GitHub Actions runs Application checks and Container checks on isolated databases.
+The staging-deploy.yml workflow waits for successful push CI on main from this
+repository. Repository variable STAGING_CD_ENABLED must equal true.
+Native Vercel Git deployments remain disabled in vercel.json; GitHub Actions
+provides the deployment gate. PR CI and manually dispatched CI do not trigger delivery.
 
-This first step is manual delivery after successful CI, not an automated CD pipeline.
-Do not claim that Vercel automatically waits for GitHub CI. Configure and verify
-an explicit deployment gate before enabling unattended releases.
+The GitHub staging environment supplies VERCEL_TOKEN and STAGING_DATABASE_URL
+as secrets, plus VERCEL_ORG_ID, VERCEL_PROJECT_ID and STAGING_DATABASE_HOST as
+variables. The direct Neon connection is used for migrations; Vercel's private
+Production environment supplies the pooled application connection and auth settings.
+The manual staging setup workflow remains responsible for optional initial bootstrap.
 
-Schema changes still use the manual staging setup workflow and reviewed committed
-migrations. Do not run migrations from a build command. Use backward-compatible
-changes while an older application is live. Rolling back a deployment does not
-undo database changes.
+The workflow checks out the exact tested commit and verifies the configured owner
+and project against its explicit staging target. It skips a commit superseded on
+main, validates the database destination, and applies committed migrations. It
+then deploys a Production-target candidate with --skip-domain and verifies its
+/api/health response before changing the stable domain.
+
+After another main-commit check, the workflow verifies the candidate identity,
+owner, project and READY status, promotes it through the team-scoped Vercel API,
+and checks that the stable domain points to the candidate and reports readiness.
+The Actions summary records the commit and candidate URL. The stable origin is
+https://mini-erp-staging.vercel.app; use it for sign-in.
+
+Setup and delivery share the staging-release concurrency group. Migrations run
+before candidate promotion, so they must remain compatible with the currently
+live application, including when a candidate fails or becomes superseded.
+Do not run migrations from the build command. A deployment rollback does not
+undo database changes. The readiness endpoint checks connectivity; it does not
+replace complete application acceptance tests.
 
 ## Limits and References
 
